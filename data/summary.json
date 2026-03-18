@@ -1,149 +1,149 @@
 {
   "total_dialogues": 698,
   "total_turns": 11849,
-  "corpus_avg_sentiment_tutor": 0.058,
-  "corpus_avg_sentiment_student": 0.057,
-  "corpus_negative_rate_student": 0.007,
+  "corpus_avg_sentiment_tutor": 0.158,
+  "corpus_avg_sentiment_student": 0.038,
+  "corpus_negative_rate_student": 0.013,
   "top_20_problematic_dialogues": [
     {
-      "dialogue_id": 586,
-      "topic": "Десятичные дроби",
+      "dialogue_id": 101,
+      "topic": "Доли. Обыкновенные дроби",
       "negative_rate_student": 0.333,
-      "avg_sentiment_student": -0.178,
+      "avg_sentiment_student": -0.086,
+      "total_turns": 12
+    },
+    {
+      "dialogue_id": 623,
+      "topic": "Логарифмы",
+      "negative_rate_student": 0.333,
+      "avg_sentiment_student": -0.258,
       "total_turns": 6
-    },
-    {
-      "dialogue_id": 129,
-      "topic": "Экстремумы функции",
-      "negative_rate_student": 0.25,
-      "avg_sentiment_student": -0.12,
-      "total_turns": 8
-    },
-    {
-      "dialogue_id": 493,
-      "topic": "Положительные и отрицательные числа",
-      "negative_rate_student": 0.25,
-      "avg_sentiment_student": -0.137,
-      "total_turns": 8
-    },
-    {
-      "dialogue_id": 74,
-      "topic": "Уравнения с умножением и делением",
-      "negative_rate_student": 0.2,
-      "avg_sentiment_student": 0.044,
-      "total_turns": 10
-    },
-    {
-      "dialogue_id": 116,
-      "topic": "Многочлен и его стандартный вид",
-      "negative_rate_student": 0.2,
-      "avg_sentiment_student": 0.055,
-      "total_turns": 10
     },
     {
       "dialogue_id": 188,
       "topic": "Многочлен и его стандартный вид",
-      "negative_rate_student": 0.2,
-      "avg_sentiment_student": 0.059,
+      "negative_rate_student": 0.267,
+      "avg_sentiment_student": -0.156,
       "total_turns": 30
     },
     {
-      "dialogue_id": 299,
-      "topic": "Положительные и отрицательные числа",
+      "dialogue_id": 42,
+      "topic": "Производная",
+      "negative_rate_student": 0.25,
+      "avg_sentiment_student": 0.054,
+      "total_turns": 8
+    },
+    {
+      "dialogue_id": 91,
+      "topic": "Основное свойство дроби",
+      "negative_rate_student": 0.25,
+      "avg_sentiment_student": -0.202,
+      "total_turns": 8
+    },
+    {
+      "dialogue_id": 135,
+      "topic": "Отношения",
+      "negative_rate_student": 0.25,
+      "avg_sentiment_student": -0.154,
+      "total_turns": 8
+    },
+    {
+      "dialogue_id": 476,
+      "topic": "Степень с действительным показателем",
+      "negative_rate_student": 0.25,
+      "avg_sentiment_student": -0.136,
+      "total_turns": 8
+    },
+    {
+      "dialogue_id": 608,
+      "topic": "Понятие конуса",
+      "negative_rate_student": 0.25,
+      "avg_sentiment_student": -0.126,
+      "total_turns": 8
+    },
+    {
+      "dialogue_id": 618,
+      "topic": "Деление",
+      "negative_rate_student": 0.25,
+      "avg_sentiment_student": -0.075,
+      "total_turns": 8
+    },
+    {
+      "dialogue_id": 39,
+      "topic": "Решение неравенств методом интервалов",
+      "negative_rate_student": 0.231,
+      "avg_sentiment_student": -0.162,
+      "total_turns": 26
+    },
+    {
+      "dialogue_id": 153,
+      "topic": "Квадратные корни. Арифметический квадратный корень",
+      "negative_rate_student": 0.214,
+      "avg_sentiment_student": -0.119,
+      "total_turns": 28
+    },
+    {
+      "dialogue_id": 151,
+      "topic": "Системы линейных уравнений с двумя переменными",
       "negative_rate_student": 0.2,
-      "avg_sentiment_student": -0.11,
+      "avg_sentiment_student": -0.141,
       "total_turns": 10
     },
     {
-      "dialogue_id": 364,
-      "topic": "Представление числовой информации на графиках",
+      "dialogue_id": 159,
+      "topic": "Решение уравнений",
       "negative_rate_student": 0.2,
-      "avg_sentiment_student": -0.129,
+      "avg_sentiment_student": -0.169,
       "total_turns": 10
+    },
+    {
+      "dialogue_id": 276,
+      "topic": "Решение текстовых задач алгебраическим методом",
+      "negative_rate_student": 0.2,
+      "avg_sentiment_student": -0.178,
+      "total_turns": 10
+    },
+    {
+      "dialogue_id": 387,
+      "topic": "Возрастание и убывание функции",
+      "negative_rate_student": 0.2,
+      "avg_sentiment_student": -0.066,
+      "total_turns": 20
     },
     {
       "dialogue_id": 398,
       "topic": "Степенная функция, ее свойства и график",
       "negative_rate_student": 0.2,
-      "avg_sentiment_student": -0.1,
+      "avg_sentiment_student": -0.122,
       "total_turns": 10
     },
     {
-      "dialogue_id": 525,
-      "topic": "Квадратные корни. Арифметический квадратный корень",
+      "dialogue_id": 579,
+      "topic": "Сложение положительных и отрицательных чисел с помощью координатной прямой",
       "negative_rate_student": 0.2,
-      "avg_sentiment_student": -0.106,
+      "avg_sentiment_student": -0.115,
       "total_turns": 20
     },
     {
-      "dialogue_id": 454,
-      "topic": "Производная",
+      "dialogue_id": 347,
+      "topic": "Решение уравнений 3-й и 4-й степени разложением на множители",
       "negative_rate_student": 0.167,
-      "avg_sentiment_student": 0.006,
+      "avg_sentiment_student": -0.064,
       "total_turns": 12
     },
     {
-      "dialogue_id": 39,
-      "topic": "Решение неравенств методом интервалов",
-      "negative_rate_student": 0.154,
-      "avg_sentiment_student": -0.1,
-      "total_turns": 26
+      "dialogue_id": 601,
+      "topic": "Системы неравенств с двумя переменными",
+      "negative_rate_student": 0.167,
+      "avg_sentiment_student": -0.085,
+      "total_turns": 24
     },
     {
-      "dialogue_id": 509,
-      "topic": "Внешние углы",
+      "dialogue_id": 146,
+      "topic": "Сложение и вычитание смешанных чисел",
       "negative_rate_student": 0.143,
-      "avg_sentiment_student": -0.08,
+      "avg_sentiment_student": -0.069,
       "total_turns": 14
-    },
-    {
-      "dialogue_id": 584,
-      "topic": "Ограниченные функции",
-      "negative_rate_student": 0.143,
-      "avg_sentiment_student": -0.105,
-      "total_turns": 14
-    },
-    {
-      "dialogue_id": 616,
-      "topic": "Доли. Обыкновенные дроби",
-      "negative_rate_student": 0.143,
-      "avg_sentiment_student": -0.023,
-      "total_turns": 14
-    },
-    {
-      "dialogue_id": 161,
-      "topic": "Сравнение натуральных чисел",
-      "negative_rate_student": 0.125,
-      "avg_sentiment_student": -0.102,
-      "total_turns": 16
-    },
-    {
-      "dialogue_id": 664,
-      "topic": "Сложение и вычитание дробей с разными знаменателями",
-      "negative_rate_student": 0.125,
-      "avg_sentiment_student": -0.061,
-      "total_turns": 16
-    },
-    {
-      "dialogue_id": 3,
-      "topic": "Положительные и отрицательные числа",
-      "negative_rate_student": 0.111,
-      "avg_sentiment_student": 0.009,
-      "total_turns": 18
-    },
-    {
-      "dialogue_id": 231,
-      "topic": "Сравнение дробей",
-      "negative_rate_student": 0.111,
-      "avg_sentiment_student": -0.061,
-      "total_turns": 18
-    },
-    {
-      "dialogue_id": 209,
-      "topic": "Доли. Обыкновенные дроби",
-      "negative_rate_student": 0.1,
-      "avg_sentiment_student": 0.003,
-      "total_turns": 20
     }
   ]
 }
