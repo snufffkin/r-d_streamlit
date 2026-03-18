@@ -95,7 +95,7 @@ st.caption("Turn-level Sentiment Analysis · Январский прод «Из�
 
 # ─── Табы ───
 
-tab_overview, tab_dist, tab_dynamics, tab_grades, tab_topics, tab_problems, tab_explorer = st.tabs([
+tab_overview, tab_dist, tab_dynamics, tab_grades, tab_topics, tab_problems, tab_explorer, tab_corrections = st.tabs([
     "📋 Обзор",
     "📊 Распределения",
     "📈 Динамика",
@@ -103,6 +103,7 @@ tab_overview, tab_dist, tab_dynamics, tab_grades, tab_topics, tab_problems, tab_
     "📚 По темам",
     "🚨 Проблемные диалоги",
     "🔍 Просмотр диалога",
+    "🔧 Коррекции",
 ])
 
 
@@ -674,6 +675,10 @@ with tab_explorer:
         if isinstance(markers, (list, np.ndarray)) and len(markers) > 0:
             markers_str = f' · <span style="font-size:11px;color:#666;">{", ".join(str(m) for m in markers)}</span>'
 
+        correction_str = ""
+        if "correction_rule" in turn and turn.get("correction_rule"):
+            correction_str = f' · <span style="background:#DBEAFE;color:#1E40AF;padding:1px 6px;border-radius:8px;font-size:10px;">🔧 {turn["correction_rule"]}</span>'
+
         text_preview = turn["text_clean"][:300]
         if len(turn["text_clean"]) > 300:
             text_preview += "..."
@@ -681,8 +686,161 @@ with tab_explorer:
         st.markdown(
             f'<div style="text-align:{align};margin-bottom:8px;">'
             f'<div style="display:inline-block;background:{bg};padding:10px 14px;border-radius:12px;max-width:80%;text-align:left;">'
-            f'<b>{role_ru}</b> {badge}{markers_str}<br>'
+            f'<b>{role_ru}</b> {badge}{markers_str}{correction_str}<br>'
             f'<span style="font-size:14px;">{text_preview}</span>'
             f'</div></div>',
             unsafe_allow_html=True,
         )
+
+
+# ═══════════════════════════════════════════
+# TAB 8: КОРРЕКЦИИ
+# ═══════════════════════════════════════════
+
+with tab_corrections:
+    st.header("Rule-based коррекции поверх BERT")
+    st.caption("Детерминированные правила, исправляющие систематические ошибки sentiment-модели в образовательном контексте")
+
+    has_corrections = "correction_rule" in turns.columns
+    if not has_corrections:
+        st.warning("Колонка `correction_rule` отсутствует в данных. Перезапустите пайплайн с модулем corrections.py.")
+    else:
+        corrected = turns[turns["correction_rule"].astype(str).ne("")]
+        total_corrected = len(corrected)
+
+        c1, c2, c3, c4 = st.columns(4)
+        c1.metric("Всего скорректировано", f"{total_corrected:,}")
+        c2.metric("% от всех реплик", f"{total_corrected / len(turns) * 100:.1f}%")
+        corrected_tutor = len(corrected[corrected["role"] == "tutor"])
+        corrected_student = len(corrected[corrected["role"] == "student"])
+        c3.metric("Тьютор", f"{corrected_tutor:,}")
+        c4.metric("Ученик", f"{corrected_student:,}")
+
+        st.divider()
+        st.subheader("Количество коррекций по правилам")
+
+        RULE_DESCRIPTIONS = {
+            "math_expression": "Мат. выражение → neutral",
+            "topic_request": "Запрос темы → neutral",
+            "short_neutral_student": "Короткий ответ без эмоций → neutral",
+            "gratitude_detected": "Благодарность/интерес → slightly_positive",
+            "frustration_detected": "Фрустрация обнаружена → slightly_negative",
+            "frustration_softened": "Фрустрация смягчена (было слишком negative)",
+            "frustration_with_emoji": "Фрустрация + грустный эмодзи",
+            "tutor_praise_strong": "Похвала тьютора (2+ слова) → positive",
+            "tutor_praise": "Похвала тьютора (1 слово) → slightly_positive",
+            "tutor_instruction": "Инструкция тьютора → neutral",
+            "tutor_definition": "Определение/теория → neutral",
+            "tutor_soft_correction": "Мягкая коррекция ('Почти!') → slightly_positive",
+            "tutor_formula_neutral": "Тьютор + формулы → neutral",
+            "profanity": "Ругательства → negative",
+            "homework_copypaste": "Копипаста задания → neutral",
+            "student_question": "Учебный вопрос → neutral",
+            "student_math_answer_long": "Длинный мат. ответ → neutral",
+            "empty_turn": "Пустая реплика → neutral",
+        }
+
+        rule_counts = corrected["correction_rule"].value_counts().reset_index()
+        rule_counts.columns = ["rule", "count"]
+        rule_counts["description"] = rule_counts["rule"].map(
+            lambda r: RULE_DESCRIPTIONS.get(r, r)
+        )
+
+        fig = px.bar(
+            rule_counts,
+            x="count", y="description",
+            orientation="h",
+            color="count",
+            color_continuous_scale="Blues",
+            labels={"count": "Кол-во", "description": "Правило"},
+            text="count",
+        )
+        fig.update_layout(
+            height=max(400, len(rule_counts) * 35),
+            yaxis=dict(categoryorder="total ascending"),
+            showlegend=False,
+        )
+        fig.update_traces(textposition="outside")
+        st.plotly_chart(fig, use_container_width=True)
+
+        st.divider()
+        st.subheader("Коррекции по ролям")
+
+        col1, col2 = st.columns(2)
+
+        with col1:
+            st.markdown("**Тьютор**")
+            tutor_rules = corrected[corrected["role"] == "tutor"]["correction_rule"].value_counts()
+            if not tutor_rules.empty:
+                tutor_rule_df = tutor_rules.reset_index()
+                tutor_rule_df.columns = ["rule", "count"]
+                tutor_rule_df["description"] = tutor_rule_df["rule"].map(
+                    lambda r: RULE_DESCRIPTIONS.get(r, r)
+                )
+                fig = px.pie(
+                    tutor_rule_df, names="description", values="count",
+                    hole=0.4,
+                    color_discrete_sequence=px.colors.qualitative.Set3,
+                )
+                fig.update_layout(height=350)
+                st.plotly_chart(fig, use_container_width=True)
+
+        with col2:
+            st.markdown("**Ученик**")
+            student_rules = corrected[corrected["role"] == "student"]["correction_rule"].value_counts()
+            if not student_rules.empty:
+                student_rule_df = student_rules.reset_index()
+                student_rule_df.columns = ["rule", "count"]
+                student_rule_df["description"] = student_rule_df["rule"].map(
+                    lambda r: RULE_DESCRIPTIONS.get(r, r)
+                )
+                fig = px.pie(
+                    student_rule_df, names="description", values="count",
+                    hole=0.4,
+                    color_discrete_sequence=px.colors.qualitative.Pastel,
+                )
+                fig.update_layout(height=350)
+                st.plotly_chart(fig, use_container_width=True)
+
+        st.divider()
+        st.subheader("Примеры скорректированных реплик")
+
+        selected_rule = st.selectbox(
+            "Фильтр по правилу",
+            ["Все"] + list(rule_counts["rule"]),
+            format_func=lambda r: f"{RULE_DESCRIPTIONS.get(r, r)}" if r != "Все" else "Все правила",
+        )
+
+        examples = corrected if selected_rule == "Все" else corrected[corrected["correction_rule"] == selected_rule]
+        examples = examples.head(30)
+
+        for _, row in examples.iterrows():
+            score = row["sentiment_score"]
+            rule = row["correction_rule"]
+            role_ru = ROLE_RU.get(row["role"], row["role"])
+
+            if score > 0.3:
+                color = "#22C55E"
+            elif score > 0.1:
+                color = "#60A5FA"
+            elif score > -0.1:
+                color = "#9CA3AF"
+            elif score > -0.3:
+                color = "#F97316"
+            else:
+                color = "#EF4444"
+
+            badge = f'<span style="background:{color};color:white;padding:2px 8px;border-radius:10px;font-size:12px;">{score:+.2f}</span>'
+            rule_badge = f'<span style="background:#DBEAFE;color:#1E40AF;padding:2px 6px;border-radius:8px;font-size:11px;">🔧 {RULE_DESCRIPTIONS.get(rule, rule)}</span>'
+
+            text_preview = str(row["text_clean"])[:200]
+            if len(str(row["text_clean"])) > 200:
+                text_preview += "..."
+
+            st.markdown(
+                f'<div style="margin-bottom:6px;padding:8px 12px;background:#F9FAFB;border-radius:8px;border-left:3px solid {color};">'
+                f'<b>{role_ru}</b> {badge} {rule_badge}<br>'
+                f'<span style="font-size:13px;color:#374151;">{text_preview}</span>'
+                f'</div>',
+                unsafe_allow_html=True,
+            )
