@@ -8,3 +8,5 @@ st.set_page_config(
 
 st.title("📊 R&D Аналитика")
 st.markdown("Результаты аналитической работы.")
+
+st.page_link("pages/generators.py", label="Оценка трудоёмкости генераторов", icon="🔬")
