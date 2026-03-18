@@ -10,3 +10,4 @@ st.title("📊 R&D Аналитика")
 st.markdown("Результаты аналитической работы.")
 
 st.page_link("pages/generators.py", label="Оценка трудоёмкости генераторов", icon="🔬")
+st.page_link("pages/sentiment.py", label="Эмоциональная окраска диалогов", icon="🎭")
