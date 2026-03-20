@@ -298,86 +298,100 @@ with tab0:
     fig_sun.update_layout(height=550)
     st.plotly_chart(fig_sun, use_container_width=True)
 
-    # Detailed table per section
-    for section in gen_df["Раздел"].unique():
-        sec_rows = gen_df[gen_df["Раздел"] == section]
-        total_tasks = int(sec_rows["Задач"].sum())
-        gen_tasks = int(sec_rows[sec_rows["Генератор возможен"]]["Задач"].sum())
-        unique_gens = len(sec_rows[sec_rows["Генератор возможен"]])
-
-        with st.expander(
-            f"**{section}** — {total_tasks} задач, {unique_gens} генераторов, покрыто {gen_tasks}",
-            expanded=False,
-        ):
-            display_df = sec_rows[["Тема", "Задач", "Генератор возможен", "Сложность", "Ч/ч", "Комментарий"]].copy()
-            display_df["Генератор возможен"] = display_df["Генератор возможен"].map({True: "✅", False: "❌"})
-            display_df.columns = ["Тема", "Задач", "Генератор", "Сложность", "Ч/ч", "Комментарий"]
-            st.dataframe(display_df, use_container_width=True, hide_index=True)
-
-    # --- Compute totals from detailed data ---
-    def parse_hours(h_str):
-        """Parse '0.5–1' or '0.5' into (min, max) floats."""
-        if h_str == "—" or not h_str:
-            return (0, 0)
-        h_str = h_str.replace("–", "-").replace("—", "-")
-        if "-" in h_str:
-            parts = h_str.split("-")
-            return (float(parts[0]), float(parts[1]))
-        return (float(h_str), float(h_str))
-
-    gen_possible_hours = gen_possible["Ч/ч"].apply(parse_hours)
-    total_hours_min = sum(h[0] for h in gen_possible_hours)
-    total_hours_max = sum(h[1] for h in gen_possible_hours)
-    total_tasks_covered = int(gen_possible["Задач"].sum())
-    total_themes_with_gen = len(gen_possible)
-    total_tasks_not = int(gen_not["Задач"].sum()) + non_alg_count
-
-    st.divider()
-
-    # --- Summary table computed from detail ---
+    # --- Editable table: all themes with hours ---
     st.subheader("Сводная оценка трудоёмкости")
 
     st.markdown(
-        "**Ключевое наблюдение:** внутри одного раздела несколько тем, и не каждая тема = отдельный генератор. "
-        "Некоторые темы покрываются одним скриптом (например, «сложение» и «умножение» в уравнениях — "
-        "оба через генератор линейных уравнений)."
+        "Колонку **Ч/ч** можно редактировать — итоги пересчитаются автоматически. "
+        "Колонку **Генератор** тоже можно переключать."
     )
 
-    # Per-section summary
+    edit_df = gen_df[["Раздел", "Тема", "Задач", "Генератор возможен", "Ч/ч", "Комментарий"]].copy()
+    edit_df = edit_df.rename(columns={"Генератор возможен": "Генератор"})
+
+    edited = st.data_editor(
+        edit_df,
+        use_container_width=True,
+        hide_index=True,
+        num_rows="fixed",
+        column_config={
+            "Раздел": st.column_config.TextColumn("Раздел", disabled=True, width="medium"),
+            "Тема": st.column_config.TextColumn("Тема", disabled=True, width="medium"),
+            "Задач": st.column_config.NumberColumn("Задач", disabled=True, width="small"),
+            "Генератор": st.column_config.CheckboxColumn("Генератор", width="small"),
+            "Ч/ч": st.column_config.TextColumn("Ч/ч", width="small",
+                                                 help="Формат: число или диапазон (0.5, 1–2). «—» = не делаем"),
+            "Комментарий": st.column_config.TextColumn("Комментарий", disabled=True, width="large"),
+        },
+        key="theme_editor",
+    )
+
+    # --- Compute totals from edited data ---
+    def parse_hours(h_str):
+        """Parse '0.5–1' or '0.5' into (min, max) floats."""
+        if not h_str or h_str.strip() in ("—", "-", ""):
+            return (0.0, 0.0)
+        h_str = str(h_str).replace("–", "-").replace("—", "-").strip()
+        if "-" in h_str:
+            parts = h_str.split("-")
+            try:
+                return (float(parts[0]), float(parts[1]))
+            except ValueError:
+                return (0.0, 0.0)
+        try:
+            v = float(h_str)
+            return (v, v)
+        except ValueError:
+            return (0.0, 0.0)
+
+    edited_gen = edited[edited["Генератор"] == True]
+    edited_not = edited[edited["Генератор"] == False]
+
+    edited_gen_hours = edited_gen["Ч/ч"].apply(parse_hours)
+    total_hours_min = sum(h[0] for h in edited_gen_hours)
+    total_hours_max = sum(h[1] for h in edited_gen_hours)
+    total_tasks_covered = int(edited_gen["Задач"].sum())
+    total_themes_with_gen = len(edited_gen)
+    total_tasks_not = int(edited_not["Задач"].sum()) + non_alg_count
+
+    st.divider()
+
+    # --- Per-section summary (from edited data) ---
+    st.subheader("Итого по разделам")
+
     section_summary = []
-    for section in gen_df["Раздел"].unique():
-        sec_rows = gen_df[gen_df["Раздел"] == section]
-        sec_gen = sec_rows[sec_rows["Генератор возможен"]]
+    for section in edited["Раздел"].unique():
+        sec_rows = edited[edited["Раздел"] == section]
+        sec_gen = sec_rows[sec_rows["Генератор"] == True]
         sec_hours = sec_gen["Ч/ч"].apply(parse_hours)
         h_min = sum(h[0] for h in sec_hours)
         h_max = sum(h[1] for h in sec_hours)
         section_summary.append({
             "Раздел": section,
-            "Тем всего": len(sec_rows),
-            "Тем с генератором": len(sec_gen),
+            "Тем": len(sec_rows),
+            "С генератором": len(sec_gen),
             "Задач покрыто": int(sec_gen["Задач"].sum()),
-            "Задач без генератора": int(sec_rows[~sec_rows["Генератор возможен"]]["Задач"].sum()),
+            "Без генератора": int(sec_rows[sec_rows["Генератор"] == False]["Задач"].sum()),
             "Ч/ч (min)": h_min,
             "Ч/ч (max)": h_max,
-            "Ч/ч": f"{h_min:.0f}–{h_max:.0f}" if h_min != h_max else f"{h_min:.0f}",
+            "Ч/ч": f"{h_min:.1f}–{h_max:.1f}" if h_min != h_max else f"{h_min:.1f}",
         })
 
     summary_df = pd.DataFrame(section_summary)
 
-    # Add totals row
     totals = {
         "Раздел": "ИТОГО",
-        "Тем всего": summary_df["Тем всего"].sum(),
-        "Тем с генератором": summary_df["Тем с генератором"].sum(),
-        "Задач покрыто": summary_df["Задач покрыто"].sum(),
-        "Задач без генератора": summary_df["Задач без генератора"].sum(),
+        "Тем": int(summary_df["Тем"].sum()),
+        "С генератором": int(summary_df["С генератором"].sum()),
+        "Задач покрыто": int(summary_df["Задач покрыто"].sum()),
+        "Без генератора": int(summary_df["Без генератора"].sum()),
         "Ч/ч (min)": summary_df["Ч/ч (min)"].sum(),
         "Ч/ч (max)": summary_df["Ч/ч (max)"].sum(),
-        "Ч/ч": f"{summary_df['Ч/ч (min)'].sum():.0f}–{summary_df['Ч/ч (max)'].sum():.0f}",
+        "Ч/ч": f"{summary_df['Ч/ч (min)'].sum():.1f}–{summary_df['Ч/ч (max)'].sum():.1f}",
     }
     summary_display = pd.concat([summary_df, pd.DataFrame([totals])], ignore_index=True)
     st.dataframe(
-        summary_display[["Раздел", "Тем всего", "Тем с генератором", "Задач покрыто", "Задач без генератора", "Ч/ч"]],
+        summary_display[["Раздел", "Тем", "С генератором", "Задач покрыто", "Без генератора", "Ч/ч"]],
         use_container_width=True,
         hide_index=True,
     )
@@ -385,7 +399,7 @@ with tab0:
     # Key metrics
     col1, col2, col3, col4 = st.columns(4)
     with col1:
-        st.metric("Всего Ч/ч", f"{total_hours_min:.0f}–{total_hours_max:.0f}")
+        st.metric("Всего Ч/ч", f"{total_hours_min:.1f}–{total_hours_max:.1f}")
     with col2:
         st.metric("Тем с генераторами", total_themes_with_gen)
     with col3:
