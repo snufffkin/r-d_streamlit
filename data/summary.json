@@ -1,86 +1,16 @@
 {
-  "total_dialogues": 698,
-  "total_turns": 11849,
-  "corpus_avg_sentiment_tutor": 0.211,
-  "corpus_avg_sentiment_student": 0.001,
-  "corpus_negative_rate_student": 0.002,
+  "total_dialogues": 10,
+  "total_turns": 226,
+  "corpus_avg_sentiment_tutor": 0.207,
+  "corpus_avg_sentiment_student": -0.01,
+  "corpus_negative_rate_student": 0.014,
   "top_20_problematic_dialogues": [
-    {
-      "dialogue_id": 616,
-      "topic": "Доли. Обыкновенные дроби",
-      "negative_rate_student": 0.286,
-      "avg_sentiment_student": -0.257,
-      "total_turns": 14
-    },
-    {
-      "dialogue_id": 188,
-      "topic": "Многочлен и его стандартный вид",
-      "negative_rate_student": 0.267,
-      "avg_sentiment_student": -0.233,
-      "total_turns": 30
-    },
-    {
-      "dialogue_id": 39,
-      "topic": "Решение неравенств методом интервалов",
-      "negative_rate_student": 0.154,
-      "avg_sentiment_student": -0.185,
-      "total_turns": 26
-    },
-    {
-      "dialogue_id": 161,
-      "topic": "Сравнение натуральных чисел",
-      "negative_rate_student": 0.125,
-      "avg_sentiment_student": -0.113,
-      "total_turns": 16
-    },
-    {
-      "dialogue_id": 204,
-      "topic": "Пропорция",
-      "negative_rate_student": 0.125,
-      "avg_sentiment_student": -0.121,
-      "total_turns": 16
-    },
     {
       "dialogue_id": 3,
       "topic": "Положительные и отрицательные числа",
       "negative_rate_student": 0.111,
       "avg_sentiment_student": -0.09,
       "total_turns": 18
-    },
-    {
-      "dialogue_id": 263,
-      "topic": "Изменение величин",
-      "negative_rate_student": 0.091,
-      "avg_sentiment_student": -0.082,
-      "total_turns": 22
-    },
-    {
-      "dialogue_id": 338,
-      "topic": "Сокращение дробей",
-      "negative_rate_student": 0.091,
-      "avg_sentiment_student": -0.068,
-      "total_turns": 22
-    },
-    {
-      "dialogue_id": 240,
-      "topic": "Сложение и вычитание дробей с разными знаменателями",
-      "negative_rate_student": 0.083,
-      "avg_sentiment_student": -0.063,
-      "total_turns": 24
-    },
-    {
-      "dialogue_id": 440,
-      "topic": "Сложение и вычитание дробей с разными знаменателями",
-      "negative_rate_student": 0.067,
-      "avg_sentiment_student": -0.1,
-      "total_turns": 30
-    },
-    {
-      "dialogue_id": 49,
-      "topic": "Уравнения со сложением и вычитанием",
-      "negative_rate_student": 0.045,
-      "avg_sentiment_student": -0.038,
-      "total_turns": 44
     },
     {
       "dialogue_id": 7,
