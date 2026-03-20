@@ -150,39 +150,6 @@ with tab0:
 
     st.divider()
 
-    # --- Phase plan ---
-    st.subheader("План по фазам")
-
-    phase_data = [
-        {
-            "Фаза": "Фаза 1 — Quick Wins",
-            "Генераторов": 7,
-            "Ч/ч": "5–7",
-            "Задач": 164,
-            "% датасета": f"{100 * 164 / len(df):.0f}%",
-            "Темы": "Линейные уравнения, порядок действий, выражения с корнями, умножение/деление, сложение/вычитание, квадратный трёхчлен, степени",
-        },
-        {
-            "Фаза": "Фаза 2 — Расширение",
-            "Генераторов": 8,
-            "Ч/ч": "8–15",
-            "Задач": 97,
-            "% датасета": f"{100 * 97 / len(df):.0f}%",
-            "Темы": "Проценты, значение выражения, алгебраические дроби, задачи на лин. уравнение, дробно-рац. уравнения, системы, обыкн. дроби",
-        },
-        {
-            "Фаза": "Итого",
-            "Генераторов": 15,
-            "Ч/ч": "13–22",
-            "Задач": 261,
-            "% датасета": f"{100 * 261 / len(df):.0f}%",
-            "Темы": "",
-        },
-    ]
-    st.dataframe(pd.DataFrame(phase_data), use_container_width=True, hide_index=True)
-
-    st.divider()
-
     # --- Detailed breakdown: section → theme → generators ---
     st.subheader("Детальная раскладка: раздел → тема → генераторы")
 
@@ -347,14 +314,84 @@ with tab0:
             display_df.columns = ["Тема", "Задач", "Генератор", "Сложность", "Ч/ч", "Комментарий"]
             st.dataframe(display_df, use_container_width=True, hide_index=True)
 
-    # Total hours estimate from detailed data
-    st.markdown("---")
+    # --- Compute totals from detailed data ---
+    def parse_hours(h_str):
+        """Parse '0.5–1' or '0.5' into (min, max) floats."""
+        if h_str == "—" or not h_str:
+            return (0, 0)
+        h_str = h_str.replace("–", "-").replace("—", "-")
+        if "-" in h_str:
+            parts = h_str.split("-")
+            return (float(parts[0]), float(parts[1]))
+        return (float(h_str), float(h_str))
+
+    gen_possible_hours = gen_possible["Ч/ч"].apply(parse_hours)
+    total_hours_min = sum(h[0] for h in gen_possible_hours)
+    total_hours_max = sum(h[1] for h in gen_possible_hours)
+    total_tasks_covered = int(gen_possible["Задач"].sum())
+    total_themes_with_gen = len(gen_possible)
+    total_tasks_not = int(gen_not["Задач"].sum()) + non_alg_count
+
+    st.divider()
+
+    # --- Summary table computed from detail ---
+    st.subheader("Сводная оценка трудоёмкости")
+
     st.markdown(
-        "**Ключевое наблюдение:** внутри одного раздела несколько тем, и не каждая тема = 1 генератор. "
-        "Некоторые темы покрываются одним и тем же генератором (например, «сложение и вычитание» "
-        "и «умножение и деление» в уравнениях — оба покрываются генератором линейных уравнений). "
-        "Реальное количество уникальных скриптов — **15–20**, а не 40+."
+        "**Ключевое наблюдение:** внутри одного раздела несколько тем, и не каждая тема = отдельный генератор. "
+        "Некоторые темы покрываются одним скриптом (например, «сложение» и «умножение» в уравнениях — "
+        "оба через генератор линейных уравнений)."
     )
+
+    # Per-section summary
+    section_summary = []
+    for section in gen_df["Раздел"].unique():
+        sec_rows = gen_df[gen_df["Раздел"] == section]
+        sec_gen = sec_rows[sec_rows["Генератор возможен"]]
+        sec_hours = sec_gen["Ч/ч"].apply(parse_hours)
+        h_min = sum(h[0] for h in sec_hours)
+        h_max = sum(h[1] for h in sec_hours)
+        section_summary.append({
+            "Раздел": section,
+            "Тем всего": len(sec_rows),
+            "Тем с генератором": len(sec_gen),
+            "Задач покрыто": int(sec_gen["Задач"].sum()),
+            "Задач без генератора": int(sec_rows[~sec_rows["Генератор возможен"]]["Задач"].sum()),
+            "Ч/ч (min)": h_min,
+            "Ч/ч (max)": h_max,
+            "Ч/ч": f"{h_min:.0f}–{h_max:.0f}" if h_min != h_max else f"{h_min:.0f}",
+        })
+
+    summary_df = pd.DataFrame(section_summary)
+
+    # Add totals row
+    totals = {
+        "Раздел": "ИТОГО",
+        "Тем всего": summary_df["Тем всего"].sum(),
+        "Тем с генератором": summary_df["Тем с генератором"].sum(),
+        "Задач покрыто": summary_df["Задач покрыто"].sum(),
+        "Задач без генератора": summary_df["Задач без генератора"].sum(),
+        "Ч/ч (min)": summary_df["Ч/ч (min)"].sum(),
+        "Ч/ч (max)": summary_df["Ч/ч (max)"].sum(),
+        "Ч/ч": f"{summary_df['Ч/ч (min)'].sum():.0f}–{summary_df['Ч/ч (max)'].sum():.0f}",
+    }
+    summary_display = pd.concat([summary_df, pd.DataFrame([totals])], ignore_index=True)
+    st.dataframe(
+        summary_display[["Раздел", "Тем всего", "Тем с генератором", "Задач покрыто", "Задач без генератора", "Ч/ч"]],
+        use_container_width=True,
+        hide_index=True,
+    )
+
+    # Key metrics
+    col1, col2, col3, col4 = st.columns(4)
+    with col1:
+        st.metric("Всего Ч/ч", f"{total_hours_min:.0f}–{total_hours_max:.0f}")
+    with col2:
+        st.metric("Тем с генераторами", total_themes_with_gen)
+    with col3:
+        st.metric("Задач покрыто", f"{total_tasks_covered} ({100 * total_tasks_covered / len(df):.0f}%)")
+    with col4:
+        st.metric("Не покрывается", f"{total_tasks_not}")
 
     st.divider()
 
@@ -378,30 +415,39 @@ with tab0:
     st.subheader("Рекомендация")
 
     st.info(
-        "**13–22 часа работы** на 15 генераторов закроют **51% задач** (261 из 512) "
-        "с гарантированным качеством. Все генераторы фазы 1 укладываются в порог Павла "
-        "(< 1 часа на генератор). Начинать с линейных уравнений — максимальный ROI (40 задач)."
+        f"**{total_hours_min:.0f}–{total_hours_max:.0f} часов работы** на {total_themes_with_gen} генераторов "
+        f"закроют **{100 * total_tasks_covered / len(df):.0f}% задач** ({total_tasks_covered} из {len(df)}) "
+        "с гарантированным качеством. Начинать с линейных уравнений — максимальный ROI (32 задачи)."
     )
 
     st.warning(
-        "**Оставшиеся 49%** (текстовые задачи, кружок, геометрия) требуют другого подхода: "
+        f"**Оставшиеся {100 * non_alg_count / len(df):.0f}%** (текстовые задачи, кружок, геометрия) требуют другого подхода: "
         "ревизия пайплайна синтетической генерации Айрата. Отдельно — олимпиадные задачи "
         "(30 шт., 70% ошибок ответа): написать образцовые схемы по классическим сборникам."
     )
 
-    # --- Visual summary ---
+    # --- Visual summary (computed) ---
     summary_fig = go.Figure()
     summary_fig.add_trace(go.Bar(
-        name="Фаза 1 (генераторы)", x=["План"], y=[164],
-        marker_color="#2ecc71", text=["164 задач<br>5–7 ч"], textposition="inside",
+        name="Покрыто генераторами",
+        x=["План"], y=[total_tasks_covered],
+        marker_color="#2ecc71",
+        text=[f"{total_tasks_covered} задач<br>{total_hours_min:.0f}–{total_hours_max:.0f} ч"],
+        textposition="inside",
     ))
     summary_fig.add_trace(go.Bar(
-        name="Фаза 2 (генераторы)", x=["План"], y=[97],
-        marker_color="#3498db", text=["97 задач<br>8–15 ч"], textposition="inside",
+        name="Не алгоритмизируется (внутри алг. разделов)",
+        x=["План"], y=[int(gen_not["Задач"].sum())],
+        marker_color="#f39c12",
+        text=[f"{int(gen_not['Задач'].sum())} задач<br>малый объём / текст"],
+        textposition="inside",
     ))
     summary_fig.add_trace(go.Bar(
-        name="Не покрывается", x=["План"], y=[non_alg_count],
-        marker_color="#e74c3c", text=[f"{non_alg_count} задач<br>синт. пайплайн"], textposition="inside",
+        name="Не покрывается (другие разделы)",
+        x=["План"], y=[non_alg_count],
+        marker_color="#e74c3c",
+        text=[f"{non_alg_count} задач<br>синт. пайплайн"],
+        textposition="inside",
     ))
     summary_fig.update_layout(
         barmode="stack",
