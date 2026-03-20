@@ -53,8 +53,13 @@ LP_RU = {"productive": "Продуктивно", "disengaged": "Отвлечён
 
 # ── Загрузка данных ────────────────────────────────────────────────────────
 
+def _mtime(p: Path) -> float:
+    """Время модификации файла — используется как ключ кеша."""
+    return p.stat().st_mtime if p.exists() else 0.0
+
+
 @st.cache_data
-def load_summary() -> dict | None:
+def load_summary(_mtime_key: float) -> dict | None:
     p = DATA_DIR / "summary.json"
     if not p.exists():
         return None
@@ -63,7 +68,7 @@ def load_summary() -> dict | None:
 
 
 @st.cache_data
-def load_dialogues() -> list[dict] | None:
+def load_dialogues(_mtime_key: float) -> list[dict] | None:
     p = DATA_DIR / "dialogues.json"
     if not p.exists():
         return None
@@ -72,7 +77,7 @@ def load_dialogues() -> list[dict] | None:
 
 
 @st.cache_data
-def load_turns() -> pd.DataFrame | None:
+def load_turns(_mtime_key: float) -> pd.DataFrame | None:
     p = DATA_DIR / "turns.parquet"
     if not p.exists():
         return None
@@ -80,7 +85,7 @@ def load_turns() -> pd.DataFrame | None:
 
 
 @st.cache_data
-def load_annotations() -> pd.DataFrame | None:
+def load_annotations(_mtime_key: float) -> pd.DataFrame | None:
     p = DATA_DIR / "annotated_turns.jsonl"
     if not p.exists():
         return None
@@ -121,10 +126,10 @@ def sentiment_badge(label: str, score: float) -> str:
 
 # ── Данные ─────────────────────────────────────────────────────────────────
 
-summary = load_summary()
-dialogues = load_dialogues()
-turns_df = load_turns()
-annotations_df = load_annotations()
+summary = load_summary(_mtime(DATA_DIR / "summary.json"))
+dialogues = load_dialogues(_mtime(DATA_DIR / "dialogues.json"))
+turns_df = load_turns(_mtime(DATA_DIR / "turns.parquet"))
+annotations_df = load_annotations(_mtime(DATA_DIR / "annotated_turns.jsonl"))
 
 # ── Заголовок ──────────────────────────────────────────────────────────────
 
