@@ -37,6 +37,8 @@ EMOTION_COLORS = {
     "frustration": "#C0392B",
     "joy": "#F1C40F",
     "neutral": "#BDC3C7",
+    "flow": "#22C55E",
+    "delight": "#F39C12",
 }
 EMOTION_RU = {
     "anxiety": "Тревога",
@@ -46,15 +48,16 @@ EMOTION_RU = {
     "frustration": "Фрустрация",
     "joy": "Радость",
     "neutral": "Нейтрально",
+    "flow": "Поток",
+    "delight": "Восторг",
 }
-LP_COLORS = {"productive": "#22C55E", "disengaged": "#EF4444", "n/a": "#9CA3AF"}
-LP_RU = {"productive": "Продуктивно", "disengaged": "Отвлечён", "n/a": "Н/д"}
+LP_COLORS = {"productive": "#22C55E", "disengaged": "#EF4444", "stuck": "#F97316", "n/a": "#9CA3AF"}
+LP_RU = {"productive": "Продуктивно", "disengaged": "Отвлечён", "stuck": "Застрял", "n/a": "Н/д"}
 
 
 # ── Загрузка данных ────────────────────────────────────────────────────────
 
 def _mtime(p: Path) -> float:
-    """Время модификации файла — используется как ключ кеша."""
     return p.stat().st_mtime if p.exists() else 0.0
 
 
@@ -124,12 +127,32 @@ def sentiment_badge(label: str, score: float) -> str:
     )
 
 
+def emotion_badge(emotion: str, valence: float) -> str:
+    bg = EMOTION_COLORS.get(emotion, "#9CA3AF")
+    ru = EMOTION_RU.get(emotion, emotion)
+    return (
+        f'<span style="background:{bg};color:#fff;padding:2px 8px;'
+        f'border-radius:10px;font-size:0.8em">{ru} (v={valence:+.2f})</span>'
+    )
+
+
 # ── Данные ─────────────────────────────────────────────────────────────────
 
 summary = load_summary(_mtime(DATA_DIR / "summary.json"))
 dialogues = load_dialogues(_mtime(DATA_DIR / "dialogues.json"))
 turns_df = load_turns(_mtime(DATA_DIR / "turns.parquet"))
 annotations_df = load_annotations(_mtime(DATA_DIR / "annotated_turns.jsonl"))
+
+# Построим список диалогов из аннотаций (полный набор)
+ann_dialogue_ids: list[int] = []
+ann_topic_map: dict[int, str] = {}
+if annotations_df is not None and "activity_id" in annotations_df.columns:
+    ann_topic_map = (
+        annotations_df.groupby("activity_id")["topic"]
+        .first()
+        .to_dict()
+    )
+    ann_dialogue_ids = sorted(ann_topic_map.keys())
 
 # ── Заголовок ──────────────────────────────────────────────────────────────
 
@@ -142,7 +165,7 @@ tab1, tab2, tab3, tab4, tab5 = st.tabs([
     "📋 Обзор корпуса",
     "🎭 Эмоции (Gemini)",
     "📈 Динамика диалогов",
-    "⚖️ Тьютор vs Ученик",
+    "⚖️ Valence по диалогам",
     "🔍 Проводник диалогов",
 ])
 
@@ -150,46 +173,63 @@ tab1, tab2, tab3, tab4, tab5 = st.tabs([
 # Таб 1 — Обзор корпуса
 # ═══════════════════════════════════════════════════════════════════════════
 with tab1:
-    if summary is None:
-        no_data("summary.json")
+    if annotations_df is None:
+        no_data("annotated_turns.jsonl")
     else:
+        n_dialogues = annotations_df["activity_id"].nunique()
+        n_turns = len(annotations_df)
+        avg_valence = annotations_df["valence"].mean()
+        avg_helpfulness = annotations_df["helpfulness"].mean() if "helpfulness" in annotations_df.columns else 0
+
         c1, c2, c3, c4 = st.columns(4)
-        c1.metric("Диалогов", summary["total_dialogues"])
-        c2.metric("Реплик", summary["total_turns"])
-        c3.metric("Ср. sentiment тьютора", f"{summary['corpus_avg_sentiment_tutor']:+.3f}")
-        c4.metric("Ср. sentiment ученика", f"{summary['corpus_avg_sentiment_student']:+.3f}")
+        c1.metric("Диалогов", n_dialogues)
+        c2.metric("Реплик (ученик)", n_turns)
+        c3.metric("Ср. valence", f"{avg_valence:+.3f}")
+        c4.metric("Ср. helpfulness", f"{avg_helpfulness:.2f}")
         st.divider()
 
-    if dialogues is None:
-        no_data("dialogues.json")
-    else:
-        st.subheader("Средний sentiment ученика по диалогам")
-        bar_data = pd.DataFrame([
-            {
-                "ID": d["dialogue_id"],
-                "Тема": d["topic"],
-                "Ср. sentiment": d["student"]["avg_sentiment"],
-                "Знак": "Позитивный" if d["student"]["avg_sentiment"] >= 0 else "Негативный",
-            }
-            for d in dialogues
-        ])
+        st.subheader("Средняя valence ученика по диалогам")
+        dlg_valence = (
+            annotations_df.groupby("activity_id")
+            .agg(avg_valence=("valence", "mean"), topic=("topic", "first"))
+            .reset_index()
+            .sort_values("activity_id")
+        )
+        dlg_valence["Знак"] = dlg_valence["avg_valence"].apply(
+            lambda v: "Позитивный" if v >= 0 else "Негативный"
+        )
         fig = px.bar(
-            bar_data, x="ID", y="Ср. sentiment", color="Знак",
+            dlg_valence, x="activity_id", y="avg_valence", color="Знак",
             color_discrete_map={"Позитивный": "#22C55E", "Негативный": "#EF4444"},
-            hover_data=["Тема"],
+            hover_data=["topic"],
+            labels={"activity_id": "ID диалога", "avg_valence": "Ср. valence"},
         )
         fig.update_layout(xaxis=dict(dtick=1))
         st.plotly_chart(fig, use_container_width=True)
 
-        if summary and "top_20_problematic_dialogues" in summary:
-            st.subheader("Проблемные диалоги")
-            prob = pd.DataFrame(summary["top_20_problematic_dialogues"]).rename(columns={
-                "dialogue_id": "ID", "topic": "Тема",
-                "negative_rate_student": "% негатива",
-                "avg_sentiment_student": "Ср. sentiment",
-                "total_turns": "Реплик",
+        # Проблемные диалоги (lowest valence)
+        st.subheader("Проблемные диалоги (самая низкая valence)")
+        problem = (
+            annotations_df.groupby("activity_id")
+            .agg(
+                topic=("topic", "first"),
+                avg_valence=("valence", "mean"),
+                n_turns=("turn_idx", "count"),
+                negative_share=("valence", lambda x: (x < -0.2).mean()),
+            )
+            .reset_index()
+            .sort_values("avg_valence")
+            .head(20)
+            .rename(columns={
+                "activity_id": "ID",
+                "topic": "Тема",
+                "avg_valence": "Ср. valence",
+                "n_turns": "Реплик",
+                "negative_share": "% негатива",
             })
-            st.dataframe(prob, use_container_width=True, hide_index=True)
+        )
+        problem["% негатива"] = (problem["% негатива"] * 100).round(1)
+        st.dataframe(problem, use_container_width=True, hide_index=True)
 
 # ═══════════════════════════════════════════════════════════════════════════
 # Таб 2 — Эмоции (Gemini)
@@ -284,158 +324,198 @@ with tab2:
                 st.plotly_chart(fig, use_container_width=True)
 
 # ═══════════════════════════════════════════════════════════════════════════
-# Таб 3 — Динамика диалогов
+# Таб 3 — Динамика диалогов (по Gemini valence)
 # ═══════════════════════════════════════════════════════════════════════════
 with tab3:
-    if turns_df is None or dialogues is None:
-        no_data("turns.parquet / dialogues.json")
+    if annotations_df is None or not ann_dialogue_ids:
+        no_data("annotated_turns.jsonl")
     else:
-        st.subheader("Динамика sentiment в диалогах")
+        st.subheader("Динамика valence/эмоций в диалогах")
 
-        dlg_opts = {d["dialogue_id"]: f'{d["dialogue_id"]}: {d["topic"]}' for d in dialogues}
+        dlg_opts = {did: f'{did}: {ann_topic_map.get(did, "?")}' for did in ann_dialogue_ids}
         sel = st.selectbox(
-            "Выберите диалог", list(dlg_opts.keys()),
+            "Выберите диалог", ann_dialogue_ids,
             format_func=lambda x: dlg_opts[x], key="dyn_dlg",
         )
 
-        dt = turns_df[turns_df["dialogue_id"] == sel].sort_values("turn_index")
+        dt = annotations_df[annotations_df["activity_id"] == sel].sort_values("turn_idx")
+        dt = dt.copy()
+        dt["emotion_ru"] = dt["emotion"].map(lambda e: EMOTION_RU.get(e, e))
+
+        # Valence line
         fig = px.line(
-            dt, x="turn_index", y="sentiment_score", color="role",
-            markers=True,
-            color_discrete_map={"tutor": "#8B5CF6", "student": "#F59E0B"},
-            labels={"turn_index": "Номер реплики", "sentiment_score": "Sentiment", "role": "Роль"},
+            dt, x="turn_idx", y="valence", markers=True,
+            labels={"turn_idx": "Номер реплики (ученик)", "valence": "Valence"},
+            hover_data=["emotion_ru", "user_reply"],
         )
+        fig.update_traces(line_color="#F59E0B", marker_color="#F59E0B")
         fig.update_layout(xaxis=dict(dtick=1), yaxis=dict(range=[-1.1, 1.1]))
         fig.add_hline(y=0, line_dash="dot", line_color="gray", opacity=0.5)
         st.plotly_chart(fig, use_container_width=True)
 
-        dm = next((d for d in dialogues if d["dialogue_id"] == sel), None)
-        if dm:
-            dyn = dm["dynamics"]
-            mc1, mc2, mc3, mc4 = st.columns(4)
-            mc1.metric("Тренд тьютора", f"{dyn['tutor_trend']:+.4f}")
-            mc2.metric("Тренд ученика", f"{dyn['student_trend']:+.4f}")
-            corr = dyn["correlation"]
-            mc3.metric("Корреляция", f"{corr:.2f}" if corr is not None else "н/д")
-            mc4.metric("Sentiment gap", f"{dyn['sentiment_gap']:+.3f}")
+        # Arousal line
+        fig2 = px.line(
+            dt, x="turn_idx", y="arousal", markers=True,
+            labels={"turn_idx": "Номер реплики (ученик)", "arousal": "Arousal"},
+            hover_data=["emotion_ru", "user_reply"],
+        )
+        fig2.update_traces(line_color="#8B5CF6", marker_color="#8B5CF6")
+        fig2.update_layout(xaxis=dict(dtick=1), yaxis=dict(range=[-1.1, 1.1]))
+        fig2.add_hline(y=0, line_dash="dot", line_color="gray", opacity=0.5)
+        st.plotly_chart(fig2, use_container_width=True)
+
+        # Emotion sequence
+        st.markdown("**Последовательность эмоций**")
+        emo_seq = dt[["turn_idx", "emotion", "emotion_ru", "valence", "arousal", "user_reply"]].copy()
+        emo_seq.columns = ["Турн", "Эмоция (код)", "Эмоция", "Valence", "Arousal", "Реплика"]
+        st.dataframe(emo_seq, use_container_width=True, hide_index=True)
 
         st.divider()
-        st.subheader("Тепловая карта sentiment ученика")
+        st.subheader("Тепловая карта valence ученика")
 
-        stu = turns_df[turns_df["role"] == "student"]
-        piv = stu.pivot_table(index="dialogue_id", columns="turn_index",
-                              values="sentiment_score", aggfunc="first")
-        topic_map = {d["dialogue_id"]: d["topic"] for d in dialogues}
-        y_labels = [topic_map.get(i, str(i)) for i in piv.index]
+        piv = annotations_df.pivot_table(
+            index="activity_id", columns="turn_idx",
+            values="valence", aggfunc="first",
+        )
+        y_labels = [f"{i}: {ann_topic_map.get(i, '?')}" for i in piv.index]
 
         fig = go.Figure(go.Heatmap(
             z=piv.values,
             x=[str(c) for c in piv.columns],
             y=y_labels,
             colorscale="RdYlGn", zmid=0,
-            colorbar=dict(title="Sentiment"),
+            colorbar=dict(title="Valence"),
         ))
-        fig.update_layout(xaxis_title="Номер реплики ученика", yaxis_title="Диалог", height=400)
+        fig.update_layout(
+            xaxis_title="Номер реплики ученика",
+            yaxis_title="Диалог",
+            height=max(400, len(piv) * 22),
+        )
         st.plotly_chart(fig, use_container_width=True)
 
 # ═══════════════════════════════════════════════════════════════════════════
-# Таб 4 — Тьютор vs Ученик
+# Таб 4 — Valence по диалогам (замена Тьютор vs Ученик)
 # ═══════════════════════════════════════════════════════════════════════════
 with tab4:
-    if dialogues is None:
-        no_data("dialogues.json")
+    if annotations_df is None:
+        no_data("annotated_turns.jsonl")
     else:
-        st.subheader("Сравнение sentiment: тьютор vs ученик")
+        st.subheader("Средняя valence и helpfulness по диалогам")
 
-        rows = []
-        for d in dialogues:
-            rows.append({
-                "ID": d["dialogue_id"], "Тема": d["topic"],
-                "Тьютор": d["tutor"]["avg_sentiment"],
-                "Ученик": d["student"]["avg_sentiment"],
-            })
-        cdf = pd.DataFrame(rows).melt(
-            id_vars=["ID", "Тема"], value_vars=["Тьютор", "Ученик"],
-            var_name="Роль", value_name="Ср. sentiment",
+        dlg_stats = (
+            annotations_df.groupby("activity_id")
+            .agg(
+                topic=("topic", "first"),
+                avg_valence=("valence", "mean"),
+                avg_arousal=("arousal", "mean"),
+                avg_helpfulness=("helpfulness", "mean"),
+                n_turns=("turn_idx", "count"),
+            )
+            .reset_index()
+            .sort_values("activity_id")
         )
+
         fig = px.bar(
-            cdf, x="ID", y="Ср. sentiment", color="Роль", barmode="group",
-            color_discrete_map={"Тьютор": "#8B5CF6", "Ученик": "#F59E0B"},
-            hover_data=["Тема"],
+            dlg_stats, x="activity_id", y="avg_valence",
+            color="avg_valence", color_continuous_scale="RdYlGn", color_continuous_midpoint=0,
+            hover_data=["topic", "avg_helpfulness", "n_turns"],
+            labels={"activity_id": "ID диалога", "avg_valence": "Ср. valence"},
         )
         fig.update_layout(xaxis=dict(dtick=1))
         st.plotly_chart(fig, use_container_width=True)
 
         st.divider()
-        st.subheader("Распределение категорий sentiment")
+        st.subheader("Распределение эмоций по диалогам")
 
-        stack_rows = []
-        for d in dialogues:
-            for rk, rr in [("tutor", "Тьютор"), ("student", "Ученик")]:
-                dist = d[rk]["sentiment_distribution"]
-                total = d[rk]["turns"]
-                for cat in SENTIMENT_ORDER:
-                    stack_rows.append({
-                        "ID": d["dialogue_id"], "Роль": rr,
-                        "Категория": SENTIMENT_RU[cat],
-                        "Доля": dist.get(cat, 0) / total if total else 0,
-                    })
-        sdf = pd.DataFrame(stack_rows)
-        fig = px.bar(
-            sdf, x="ID", y="Доля", color="Категория", facet_row="Роль",
-            color_discrete_map={SENTIMENT_RU[k]: v for k, v in SENTIMENT_COLOR.items()},
-            category_orders={"Категория": [SENTIMENT_RU[c] for c in SENTIMENT_ORDER]},
+        emo_per_dlg = (
+            annotations_df.groupby(["activity_id", "emotion"])
+            .size().reset_index(name="count")
         )
-        fig.update_layout(xaxis=dict(dtick=1), height=600)
+        totals = emo_per_dlg.groupby("activity_id")["count"].transform("sum")
+        emo_per_dlg["share"] = emo_per_dlg["count"] / totals
+        emo_per_dlg["emotion_ru"] = emo_per_dlg["emotion"].map(lambda e: EMOTION_RU.get(e, e))
+
+        fig = px.bar(
+            emo_per_dlg, x="activity_id", y="share", color="emotion_ru",
+            color_discrete_map={EMOTION_RU.get(k, k): v for k, v in EMOTION_COLORS.items()},
+            labels={"activity_id": "ID диалога", "share": "Доля", "emotion_ru": "Эмоция"},
+        )
+        fig.update_layout(xaxis=dict(dtick=1), barmode="stack")
         st.plotly_chart(fig, use_container_width=True)
 
         st.divider()
-        st.subheader("Sentiment gap vs длина диалога")
+        st.subheader("Valence vs длина диалога")
 
-        gap_rows = [{
-            "ID": d["dialogue_id"], "Тема": d["topic"],
-            "Sentiment gap": d["dynamics"]["sentiment_gap"],
-            "Реплик": d["total_turns"],
-        } for d in dialogues]
-        gdf = pd.DataFrame(gap_rows)
         fig = px.scatter(
-            gdf, x="Реплик", y="Sentiment gap", text="ID", hover_data=["Тема"],
+            dlg_stats, x="n_turns", y="avg_valence",
+            text="activity_id", hover_data=["topic"],
+            size="avg_helpfulness",
+            labels={"n_turns": "Реплик", "avg_valence": "Ср. valence"},
         )
-        fig.update_traces(textposition="top center", marker=dict(size=12))
+        fig.update_traces(textposition="top center")
         st.plotly_chart(fig, use_container_width=True)
 
 # ═══════════════════════════════════════════════════════════════════════════
 # Таб 5 — Проводник диалогов
 # ═══════════════════════════════════════════════════════════════════════════
 with tab5:
-    if turns_df is None or dialogues is None:
-        no_data("turns.parquet / dialogues.json")
+    if annotations_df is None or not ann_dialogue_ids:
+        no_data("annotated_turns.jsonl")
     else:
         st.subheader("Проводник диалогов")
 
-        dlg_opts5 = {d["dialogue_id"]: f'{d["dialogue_id"]}: {d["topic"]}' for d in dialogues}
+        dlg_opts5 = {did: f'{did}: {ann_topic_map.get(did, "?")}' for did in ann_dialogue_ids}
         sel5 = st.selectbox(
-            "Выберите диалог", list(dlg_opts5.keys()),
+            "Выберите диалог", ann_dialogue_ids,
             format_func=lambda x: dlg_opts5[x], key="expl_dlg",
         )
 
-        dt5 = turns_df[turns_df["dialogue_id"] == sel5].sort_values("turn_index")
+        ann_turns = annotations_df[annotations_df["activity_id"] == sel5].sort_values("turn_idx")
 
-        # Индекс Gemini-аннотаций
-        ann_map: dict[int, dict] = {}
-        if annotations_df is not None and "activity_id" in annotations_df.columns:
-            for _, r in annotations_df[annotations_df["activity_id"] == sel5].iterrows():
+        # Если есть BERT-данные для этого диалога — используем их для полного отображения
+        has_bert = turns_df is not None and sel5 in turns_df["dialogue_id"].values
+
+        if has_bert:
+            dt5 = turns_df[turns_df["dialogue_id"] == sel5].sort_values("turn_index")
+            ann_map: dict[int, dict] = {}
+            for _, r in ann_turns.iterrows():
                 ann_map[int(r["turn_idx"])] = r.to_dict()
 
-        for _, turn in dt5.iterrows():
-            role = turn["role"]
-            avatar = "🤖" if role == "tutor" else "🧑‍🎓"
-            with st.chat_message(role, avatar=avatar):
-                badge = sentiment_badge(turn["sentiment_label"], turn["sentiment_score"])
-                st.markdown(f'{turn["text"]}  {badge}', unsafe_allow_html=True)
+            for _, turn in dt5.iterrows():
+                role = turn["role"]
+                avatar = "🤖" if role == "tutor" else "🧑‍🎓"
+                with st.chat_message(role, avatar=avatar):
+                    badge = sentiment_badge(turn["sentiment_label"], turn["sentiment_score"])
+                    st.markdown(f'{turn["text"]}  {badge}', unsafe_allow_html=True)
 
-                ann = ann_map.get(int(turn["turn_index"]))
-                if ann:
+                    ann = ann_map.get(int(turn["turn_index"]))
+                    if ann:
+                        with st.expander("🔍 Gemini-разметка"):
+                            gc1, gc2, gc3, gc4 = st.columns(4)
+                            emo_raw = ann.get("emotion", "—")
+                            gc1.metric("Эмоция", EMOTION_RU.get(str(emo_raw), str(emo_raw)))
+                            gc2.metric("Валентность", f"{ann.get('valence', 0):+.1f}")
+                            gc3.metric("Возбуждение", f"{ann.get('arousal', 0):+.1f}")
+                            gc4.metric("Helpfulness", str(ann.get("helpfulness", "—")))
+
+                            sig = ann.get("signal_description", "")
+                            if sig:
+                                st.caption(f"**Сигнал:** {sig}")
+                            bp = ann.get("bot_prompt", "")
+                            if bp:
+                                st.caption(f"**Промпт бота:** {bp}")
+        else:
+            # Отображаем из аннотаций (только реплики ученика + бот-промпт)
+            for _, ann in ann_turns.iterrows():
+                bot_prompt = ann.get("bot_prompt", "")
+                if bot_prompt:
+                    with st.chat_message("assistant", avatar="🤖"):
+                        st.markdown(bot_prompt)
+
+                with st.chat_message("user", avatar="🧑‍🎓"):
+                    badge = emotion_badge(ann["emotion"], ann.get("valence", 0))
+                    st.markdown(f'{ann["user_reply"]}  {badge}', unsafe_allow_html=True)
+
                     with st.expander("🔍 Gemini-разметка"):
                         gc1, gc2, gc3, gc4 = st.columns(4)
                         emo_raw = ann.get("emotion", "—")
@@ -447,9 +527,10 @@ with tab5:
                         sig = ann.get("signal_description", "")
                         if sig:
                             st.caption(f"**Сигнал:** {sig}")
-                        bp = ann.get("bot_prompt", "")
-                        if bp:
-                            st.caption(f"**Промпт бота:** {bp}")
+
+                        lp = ann.get("learning_potential", "")
+                        if lp:
+                            st.caption(f"**Учебный потенциал:** {LP_RU.get(lp, lp)}")
 
 # ── Футер ──────────────────────────────────────────────────────────────────
 st.divider()
