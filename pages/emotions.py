@@ -3,6 +3,7 @@
 import json
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
@@ -161,11 +162,12 @@ st.caption("BERT sentiment + Gemini emotion annotation · Пилот «Изуч�
 
 # ── Табы ───────────────────────────────────────────────────────────────────
 
-tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
+tab1, tab2, tab3, tab4, tab_affect, tab5, tab6 = st.tabs([
     "📋 Обзор корпуса",
     "🎭 Эмоции (Gemini)",
     "📈 Динамика диалогов",
     "⚖️ Valence по диалогам",
+    "🔬 Аффективная аналитика",
     "🔍 Проводник диалогов",
     "📖 Справка",
 ])
@@ -454,6 +456,422 @@ with tab4:
             labels={"n_turns": "Реплик", "avg_valence": "Ср. valence"},
         )
         fig.update_traces(textposition="top center")
+        st.plotly_chart(fig, use_container_width=True)
+
+# ═══════════════════════════════════════════════════════════════════════════
+# Таб «Аффективная аналитика»
+# ═══════════════════════════════════════════════════════════════════════════
+with tab_affect:
+    if annotations_df is None:
+        no_data("annotated_turns.jsonl")
+    else:
+        # ── 1. Распределение диалогов по категориям valence ────────────────
+        st.subheader("Распределение диалогов по валентности")
+        st.caption("Каждый диалог классифицирован по средней valence ученика")
+
+        dlg_avg = (
+            annotations_df.groupby("activity_id")["valence"]
+            .mean().reset_index(name="avg_valence")
+        )
+        bins = [-1.01, -0.4, -0.1, 0.1, 0.4, 1.01]
+        labels_v = ["Негативный\n(< −0.4)", "Слегка негативный\n(−0.4 … −0.1)",
+                     "Нейтральный\n(−0.1 … 0.1)", "Слегка позитивный\n(0.1 … 0.4)",
+                     "Позитивный\n(> 0.4)"]
+        colors_v = ["#EF4444", "#F97316", "#9CA3AF", "#60A5FA", "#22C55E"]
+        dlg_avg["cat"] = pd.cut(dlg_avg["avg_valence"], bins=bins, labels=labels_v)
+        cat_counts = dlg_avg["cat"].value_counts().reindex(labels_v, fill_value=0).reset_index()
+        cat_counts.columns = ["Категория", "Диалогов"]
+
+        col_pie, col_bar = st.columns(2)
+        with col_pie:
+            fig = px.pie(
+                cat_counts, names="Категория", values="Диалогов",
+                color="Категория",
+                color_discrete_map=dict(zip(labels_v, colors_v)),
+            )
+            fig.update_traces(textinfo="label+value+percent")
+            st.plotly_chart(fig, use_container_width=True)
+        with col_bar:
+            fig = px.bar(
+                cat_counts, x="Категория", y="Диалогов",
+                color="Категория",
+                color_discrete_map=dict(zip(labels_v, colors_v)),
+            )
+            fig.update_layout(showlegend=False)
+            st.plotly_chart(fig, use_container_width=True)
+
+        st.divider()
+
+        # ── 2. Гистограмма valence по всем репликам ────────────────────────
+        st.subheader("Распределение valence по репликам")
+        fig = px.histogram(
+            annotations_df, x="valence", nbins=40,
+            color_discrete_sequence=["#8B5CF6"],
+            labels={"valence": "Valence", "count": "Реплик"},
+        )
+        fig.add_vline(x=0, line_dash="dot", line_color="gray", opacity=0.5)
+        fig.add_vline(
+            x=annotations_df["valence"].mean(), line_dash="dash",
+            line_color="#F59E0B", annotation_text="среднее",
+        )
+        fig.update_layout(yaxis_title="Количество реплик")
+        st.plotly_chart(fig, use_container_width=True)
+
+        st.divider()
+
+        # ── 3. Матрица переходов (цепи Маркова) ───────────────────────────
+        st.subheader("Матрица переходов эмоций (цепи Маркова)")
+        st.caption(
+            "Вероятность перехода из состояния в строке в состояние в столбце. "
+            "Считается по последовательным репликам ученика внутри каждого диалога."
+        )
+
+        # Собираем пары (emotion_t, emotion_t+1) внутри каждого диалога
+        emotions_present = sorted(annotations_df["emotion"].unique())
+        emo_labels_ru = [EMOTION_RU.get(e, e) for e in emotions_present]
+
+        transition_pairs = []
+        for _, grp in annotations_df.sort_values(["activity_id", "turn_idx"]).groupby("activity_id"):
+            emos = grp["emotion"].tolist()
+            for i in range(len(emos) - 1):
+                transition_pairs.append((emos[i], emos[i + 1]))
+
+        # Матрица подсчётов → вероятности
+        n = len(emotions_present)
+        emo_idx = {e: i for i, e in enumerate(emotions_present)}
+        counts = np.zeros((n, n), dtype=int)
+        for src, dst in transition_pairs:
+            counts[emo_idx[src], emo_idx[dst]] += 1
+
+        # Нормализация по строкам
+        row_sums = counts.sum(axis=1, keepdims=True)
+        prob_matrix = np.where(row_sums > 0, counts / row_sums, 0)
+
+        # Аннотации: вероятность + абсолютное число
+        text_matrix = []
+        for i in range(n):
+            row = []
+            for j in range(n):
+                p = prob_matrix[i, j]
+                c = counts[i, j]
+                row.append(f"{p:.0%}<br>({c})")
+            text_matrix.append(row)
+
+        fig = go.Figure(go.Heatmap(
+            z=prob_matrix,
+            x=emo_labels_ru,
+            y=emo_labels_ru,
+            text=text_matrix,
+            texttemplate="%{text}",
+            colorscale="YlOrRd",
+            colorbar=dict(title="P(переход)"),
+            hovertemplate="Из: %{y}<br>В: %{x}<br>P = %{z:.2%}<extra></extra>",
+        ))
+        fig.update_layout(
+            xaxis_title="Следующее состояние",
+            yaxis_title="Текущее состояние",
+            height=500,
+            yaxis=dict(autorange="reversed"),
+        )
+        st.plotly_chart(fig, use_container_width=True)
+
+        # Ключевые выводы из матрицы
+        col_m1, col_m2, col_m3 = st.columns(3)
+        # Самый устойчивый (диагональ)
+        diag = {emotions_present[i]: prob_matrix[i, i] for i in range(n) if row_sums[i, 0] > 0}
+        most_stable = max(diag, key=diag.get)
+        col_m1.metric(
+            "Самое устойчивое состояние",
+            EMOTION_RU.get(most_stable, most_stable),
+            f"P(остаётся) = {diag[most_stable]:.0%}",
+        )
+        # Confusion → Flow (продуктивное разрешение)
+        if "confusion" in emo_idx and "flow" in emo_idx:
+            p_cf = prob_matrix[emo_idx["confusion"], emo_idx["flow"]]
+            col_m2.metric("Confusion → Flow", f"{p_cf:.0%}",
+                          "продуктивное разрешение")
+        # Confusion → Frustration (деструктивный переход)
+        if "confusion" in emo_idx and "frustration" in emo_idx:
+            p_cfr = prob_matrix[emo_idx["confusion"], emo_idx["frustration"]]
+            col_m3.metric("Confusion → Frustration", f"{p_cfr:.0%}",
+                          "деструктивный переход")
+
+        st.divider()
+
+        # ── 4. Sankey: первая → последняя эмоция в диалоге ────────────────
+        st.subheader("Первая → последняя эмоция в диалоге")
+        st.caption(
+            "Как менялось эмоциональное состояние от начала к концу диалога"
+        )
+
+        first_last = (
+            annotations_df.sort_values(["activity_id", "turn_idx"])
+            .groupby("activity_id")["emotion"]
+            .agg(["first", "last"])
+            .reset_index()
+        )
+        fl_counts = first_last.groupby(["first", "last"]).size().reset_index(name="count")
+
+        # Sankey nodes: первые (слева) + последние (справа)
+        src_labels = [f"{EMOTION_RU.get(e, e)} (нач.)" for e in emotions_present]
+        dst_labels = [f"{EMOTION_RU.get(e, e)} (кон.)" for e in emotions_present]
+        all_labels = src_labels + dst_labels
+
+        src_colors = [EMOTION_COLORS.get(e, "#9CA3AF") for e in emotions_present]
+        dst_colors = [EMOTION_COLORS.get(e, "#9CA3AF") for e in emotions_present]
+
+        s_idx = {e: i for i, e in enumerate(emotions_present)}
+        links_src, links_dst, links_val, links_col = [], [], [], []
+        for _, row in fl_counts.iterrows():
+            links_src.append(s_idx[row["first"]])
+            links_dst.append(n + s_idx[row["last"]])
+            links_val.append(row["count"])
+            c = EMOTION_COLORS.get(row["first"], "#9CA3AF")
+            # make link color semi-transparent
+            links_col.append(c.replace("#", "rgba(") if c.startswith("#") else c)
+
+        # Convert hex to rgba for link colors
+        def hex_to_rgba(h, a=0.35):
+            h = h.lstrip("#")
+            r, g, b = int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16)
+            return f"rgba({r},{g},{b},{a})"
+
+        links_col = [hex_to_rgba(EMOTION_COLORS.get(row["first"], "#9CA3AF"))
+                     for _, row in fl_counts.iterrows()]
+
+        fig = go.Figure(go.Sankey(
+            node=dict(
+                pad=15, thickness=20,
+                label=all_labels,
+                color=src_colors + dst_colors,
+            ),
+            link=dict(
+                source=links_src, target=links_dst,
+                value=links_val, color=links_col,
+            ),
+        ))
+        fig.update_layout(height=500)
+        st.plotly_chart(fig, use_container_width=True)
+
+        st.divider()
+
+        # ── 5. Эмоции по позиции в диалоге ────────────────────────────────
+        st.subheader("Эмоции по позиции в диалоге")
+        st.caption("Распределение эмоций в начале, середине и конце диалога")
+
+        df_pos = annotations_df.copy()
+        max_turn = df_pos.groupby("activity_id")["turn_idx"].transform("max")
+        df_pos["position"] = pd.cut(
+            df_pos["turn_idx"] / max_turn.clip(lower=1),
+            bins=[-0.01, 0.33, 0.66, 1.01],
+            labels=["Начало (0–33%)", "Середина (33–66%)", "Конец (66–100%)"],
+        )
+        pos_emo = (
+            df_pos.groupby(["position", "emotion"])
+            .size().reset_index(name="count")
+        )
+        pos_totals = pos_emo.groupby("position")["count"].transform("sum")
+        pos_emo["share"] = pos_emo["count"] / pos_totals
+        pos_emo["emotion_ru"] = pos_emo["emotion"].map(lambda e: EMOTION_RU.get(e, e))
+
+        fig = px.bar(
+            pos_emo, x="position", y="share", color="emotion_ru",
+            color_discrete_map={EMOTION_RU.get(k, k): v for k, v in EMOTION_COLORS.items()},
+            labels={"position": "Позиция в диалоге", "share": "Доля", "emotion_ru": "Эмоция"},
+            barmode="stack",
+        )
+        fig.update_layout(height=450)
+        st.plotly_chart(fig, use_container_width=True)
+
+        st.divider()
+
+        # ── 6. Разрешение confusion ───────────────────────────────────────
+        st.subheader("Что следует за confusion?")
+        st.caption(
+            "Когда ученик в состоянии confusion, какое состояние наступает следующим?"
+        )
+
+        if "confusion" in emo_idx:
+            conf_row = counts[emo_idx["confusion"]]
+            conf_total = conf_row.sum()
+            if conf_total > 0:
+                conf_next = pd.DataFrame({
+                    "emotion": emotions_present,
+                    "count": conf_row,
+                    "share": conf_row / conf_total,
+                })
+                conf_next = conf_next[conf_next["count"] > 0].sort_values("count", ascending=False)
+                conf_next["emotion_ru"] = conf_next["emotion"].map(
+                    lambda e: EMOTION_RU.get(e, e)
+                )
+
+                col_c1, col_c2 = st.columns(2)
+                with col_c1:
+                    fig = px.pie(
+                        conf_next, names="emotion_ru", values="count",
+                        color="emotion",
+                        color_discrete_map=EMOTION_COLORS,
+                    )
+                    fig.update_traces(textinfo="label+percent+value")
+                    st.plotly_chart(fig, use_container_width=True)
+
+                with col_c2:
+                    # Классификация исходов
+                    productive = conf_next[
+                        conf_next["emotion"].isin(["flow", "delight", "neutral"])
+                    ]["count"].sum()
+                    stuck = conf_next[
+                        conf_next["emotion"].isin(["confusion"])
+                    ]["count"].sum()
+                    negative = conf_next[
+                        conf_next["emotion"].isin(["frustration", "boredom", "anxiety"])
+                    ]["count"].sum()
+
+                    outcome_df = pd.DataFrame({
+                        "Исход": ["Продуктивный\n(flow/delight/neutral)",
+                                  "Застрял\n(confusion снова)",
+                                  "Негативный\n(frustration/boredom/anxiety)"],
+                        "Реплик": [productive, stuck, negative],
+                    })
+                    outcome_df["Доля"] = outcome_df["Реплик"] / outcome_df["Реплик"].sum()
+
+                    fig = px.bar(
+                        outcome_df, x="Исход", y="Доля",
+                        color="Исход",
+                        color_discrete_map={
+                            "Продуктивный\n(flow/delight/neutral)": "#22C55E",
+                            "Застрял\n(confusion снова)": "#F97316",
+                            "Негативный\n(frustration/boredom/anxiety)": "#EF4444",
+                        },
+                        text=outcome_df["Доля"].apply(lambda x: f"{x:.0%}"),
+                    )
+                    fig.update_layout(showlegend=False, yaxis_tickformat=".0%")
+                    fig.update_traces(textposition="outside")
+                    st.plotly_chart(fig, use_container_width=True)
+
+        st.divider()
+
+        # ── 7. Тема × Эмоция (heatmap) ───────────────────────────────────
+        st.subheader("Эмоциональный профиль по темам")
+        st.caption("Доля каждой эмоции в рамках каждой темы")
+
+        topic_emo = (
+            annotations_df.groupby(["topic", "emotion"])
+            .size().reset_index(name="count")
+        )
+        topic_totals = topic_emo.groupby("topic")["count"].transform("sum")
+        topic_emo["share"] = topic_emo["count"] / topic_totals
+        topic_piv = topic_emo.pivot_table(
+            index="topic", columns="emotion", values="share", fill_value=0,
+        )
+        # Сортировка по общей «негативности» (frustration + boredom + anxiety)
+        neg_cols = [c for c in ["frustration", "boredom", "anxiety"] if c in topic_piv.columns]
+        if neg_cols:
+            topic_piv["_neg_total"] = topic_piv[neg_cols].sum(axis=1)
+            topic_piv = topic_piv.sort_values("_neg_total", ascending=True)
+            topic_piv = topic_piv.drop(columns="_neg_total")
+
+        col_names = [c for c in emotions_present if c in topic_piv.columns]
+        col_labels = [EMOTION_RU.get(c, c) for c in col_names]
+
+        # Аннотации с % для удобства
+        text_topic = (topic_piv[col_names].values * 100).round(1).astype(str)
+        text_topic = [[f"{v}%" for v in row] for row in text_topic]
+
+        fig = go.Figure(go.Heatmap(
+            z=topic_piv[col_names].values,
+            x=col_labels,
+            y=topic_piv.index.tolist(),
+            text=text_topic,
+            texttemplate="%{text}",
+            colorscale="YlOrRd",
+            colorbar=dict(title="Доля"),
+        ))
+        fig.update_layout(
+            height=max(400, len(topic_piv) * 28),
+            yaxis=dict(tickfont=dict(size=11)),
+        )
+        st.plotly_chart(fig, use_container_width=True)
+
+        st.divider()
+
+        # ── 8. Средняя valence по позиции в диалоге ────────────────────────
+        st.subheader("Динамика valence по нормализованной позиции")
+        st.caption(
+            "Средняя valence на каждом «проценте» диалога (все диалоги нормализованы к 0–100%)"
+        )
+
+        df_norm = annotations_df.copy()
+        max_t = df_norm.groupby("activity_id")["turn_idx"].transform("max").clip(lower=1)
+        df_norm["pct"] = (df_norm["turn_idx"] / max_t * 100).round(0).astype(int)
+        pct_valence = df_norm.groupby("pct").agg(
+            mean_valence=("valence", "mean"),
+            mean_arousal=("arousal", "mean"),
+            n=("valence", "count"),
+        ).reset_index()
+
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(
+            x=pct_valence["pct"], y=pct_valence["mean_valence"],
+            mode="lines+markers", name="Valence",
+            line=dict(color="#F59E0B", width=2),
+            marker=dict(size=pct_valence["n"].clip(upper=30) / 2),
+            hovertemplate="Позиция: %{x}%<br>Valence: %{y:.3f}<br>N=%{customdata}<extra></extra>",
+            customdata=pct_valence["n"],
+        ))
+        fig.add_trace(go.Scatter(
+            x=pct_valence["pct"], y=pct_valence["mean_arousal"],
+            mode="lines+markers", name="Arousal",
+            line=dict(color="#8B5CF6", width=2, dash="dot"),
+            marker=dict(size=4),
+        ))
+        fig.add_hline(y=0, line_dash="dot", line_color="gray", opacity=0.4)
+        fig.update_layout(
+            xaxis_title="Позиция в диалоге (%)",
+            yaxis_title="Среднее значение",
+            yaxis=dict(range=[-0.6, 0.8]),
+            height=400,
+        )
+        st.plotly_chart(fig, use_container_width=True)
+
+        st.divider()
+
+        # ── 9. Learning potential × Emotion ───────────────────────────────
+        st.subheader("Учебный потенциал по эмоциям")
+        if "learning_potential" in annotations_df.columns:
+            lp_emo = (
+                annotations_df.groupby(["emotion", "learning_potential"])
+                .size().reset_index(name="count")
+            )
+            lp_emo_totals = lp_emo.groupby("emotion")["count"].transform("sum")
+            lp_emo["share"] = lp_emo["count"] / lp_emo_totals
+            lp_emo["emotion_ru"] = lp_emo["emotion"].map(lambda e: EMOTION_RU.get(e, e))
+            lp_emo["lp_ru"] = lp_emo["learning_potential"].map(lambda v: LP_RU.get(v, v))
+
+            fig = px.bar(
+                lp_emo, x="emotion_ru", y="share", color="lp_ru",
+                color_discrete_map={v: LP_COLORS[k] for k, v in LP_RU.items()},
+                labels={"emotion_ru": "Эмоция", "share": "Доля", "lp_ru": "Потенциал"},
+                barmode="stack",
+            )
+            fig.update_layout(yaxis_tickformat=".0%")
+            st.plotly_chart(fig, use_container_width=True)
+
+        st.divider()
+
+        # ── 10. Box plot: valence по эмоциям ──────────────────────────────
+        st.subheader("Распределение valence внутри каждой эмоции")
+        df_box = annotations_df.copy()
+        df_box["emotion_ru"] = df_box["emotion"].map(lambda e: EMOTION_RU.get(e, e))
+        fig = px.box(
+            df_box, x="emotion_ru", y="valence",
+            color="emotion",
+            color_discrete_map=EMOTION_COLORS,
+            labels={"emotion_ru": "Эмоция", "valence": "Valence"},
+            points="outliers",
+        )
+        fig.update_layout(showlegend=False)
+        fig.add_hline(y=0, line_dash="dot", line_color="gray", opacity=0.4)
         st.plotly_chart(fig, use_container_width=True)
 
 # ═══════════════════════════════════════════════════════════════════════════
