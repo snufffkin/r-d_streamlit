@@ -9,4 +9,11 @@ dependencies = [
     "plotly>=6.6.0",
     "pyarrow>=23.0.1",
     "streamlit>=1.55.0",
+    "google-genai>=1.0.0",
+    "openpyxl>=3.1.0",
+    "python-dotenv>=1.0.0",
+    "tqdm>=4.60.0",
 ]
+
+[project.scripts]
+eval-intents = "eval_intents.run:main"

@@ -13,3 +13,4 @@ st.page_link("pages/generators.py", label="Оценка трудоёмкости
 st.page_link("pages/sentiment.py", label="Эмоциональная окраска диалогов", icon="🎭")
 st.page_link("pages/emotions.py", label="Эмоциональный анализ (BERT + Gemini)", icon="🧠")
 st.page_link("pages/complexity.py", label="Сложность текста диалогов (ASL / TTR)", icon="📐")
+st.page_link("pages/intent_quality.py", label="Качество интентов", icon="🎯")
