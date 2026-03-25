@@ -271,5 +271,49 @@
   },
   "DeepSeek-V3.1|medium|34|4": {
     "reviewed": true
+  },
+  "DeepSeek-V3.1|medium|123|7": {
+    "is_defect": true,
+    "match": false,
+    "ctx_appropriate": true,
+    "actual_intent": "get-solution",
+    "human_reason": "",
+    "reviewed": true
+  },
+  "DeepSeek-V3.1|medium|199|2": {
+    "reviewed": true
+  },
+  "DeepSeek-V3.1|medium|199|4": {
+    "reviewed": true
+  },
+  "DeepSeek-V3.1|medium|199|5": {
+    "reviewed": true
+  },
+  "DeepSeek-V3.1|medium|199|6": {
+    "reviewed": true
+  },
+  "DeepSeek-V3.1|medium|199|8": {
+    "reviewed": true
+  },
+  "DeepSeek-V3.1|medium|199|9": {
+    "reviewed": true
+  },
+  "DeepSeek-V3.1|medium|199|10": {
+    "reviewed": true
+  },
+  "DeepSeek-V3.1|medium|199|11": {
+    "reviewed": true
+  },
+  "DeepSeek-V3.1|medium|199|12": {
+    "reviewed": true
+  },
+  "DeepSeek-V3.1|weak|50|8": {
+    "reviewed": true
+  },
+  "GLM-4.5|strong|31|4": {
+    "reviewed": true
+  },
+  "Gemini-2.5-Flash|medium|113|10": {
+    "reviewed": true
   }
 }
