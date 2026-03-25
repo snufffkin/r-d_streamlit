@@ -1,4 +1,5 @@
 """Анализ качества интентов: match rate, распределение, проблемные реплики."""
+from __future__ import annotations
 
 import json
 import re
@@ -192,10 +193,10 @@ def _parse_dialog_to_turns(dialog_text: str) -> list[dict]:
     return turns
 
 
-@st.cache_data
 SOURCE_DIALOGS_PATH = DATA_DIR / "source_dialogs.xlsx"
 
 
+@st.cache_data
 def load_source_dialogs(_mtime_key: float) -> pd.DataFrame | None:
     """Load source dialogs from source_dialogs.xlsx and expand by model×student_type from results."""
     if not SOURCE_DIALOGS_PATH.exists():
