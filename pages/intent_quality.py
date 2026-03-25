@@ -193,45 +193,43 @@ def _parse_dialog_to_turns(dialog_text: str) -> list[dict]:
 
 
 @st.cache_data
-def _parse_filename_metadata(filename: str) -> tuple[str, str]:
-    """Extract (model_name, student_type) from _rendered*.xlsx filename."""
-    stem = Path(filename).stem  # e.g. "_rendered_gemini_weak"
-    parts = stem.lstrip("_").removeprefix("rendered").lstrip("_").split("_", 1)
-    model_name = parts[0] if parts else "unknown"
-    student_type = parts[1] if len(parts) > 1 else "unknown"
-    return model_name, student_type
+SOURCE_DIALOGS_PATH = DATA_DIR / "source_dialogs.xlsx"
 
 
 def load_source_dialogs(_mtime_key: float) -> pd.DataFrame | None:
-    """Load source dialogs from all _rendered*.xlsx files."""
-    xlsx_files = sorted(DATA_DIR.glob("_rendered*.xlsx"))
-    if not xlsx_files:
+    """Load source dialogs from source_dialogs.xlsx and expand by model×student_type from results."""
+    if not SOURCE_DIALOGS_PATH.exists():
         return None
     import openpyxl
+    wb = openpyxl.load_workbook(SOURCE_DIALOGS_PATH, data_only=True)
+    ws = wb.active
+    base_records = []
+    for row_idx in range(3, ws.max_row + 1):
+        row = [ws.cell(row=row_idx, column=c).value for c in range(1, ws.max_column + 1)]
+        if len(row) < 19:
+            continue
+        dialog_text = row[18]
+        if not dialog_text or not str(dialog_text).strip():
+            continue
+        if str(dialog_text).strip() in ("string", "any", "int64", "float64"):
+            continue
+        base_records.append({
+            "dialog_idx": row_idx - 2,
+            "grade_group": str(row[2] or ""),
+            "task_id": str(row[8] or ""),
+            "dialog": str(dialog_text),
+        })
+    wb.close()
+    if not base_records:
+        return None
+    # Expand each dialog by model×student_type combinations present in results
+    results_df = pd.read_csv(RESULTS_PATH)
+    combos = results_df[["model", "student_type"]].drop_duplicates().to_dict("records")
     all_records = []
-    for xlsx_path in xlsx_files:
-        model_name, student_type = _parse_filename_metadata(str(xlsx_path))
-        wb = openpyxl.load_workbook(xlsx_path, data_only=True)
-        ws = wb.active
-        for row_idx in range(3, ws.max_row + 1):
-            row = [ws.cell(row=row_idx, column=c).value for c in range(1, ws.max_column + 1)]
-            if len(row) < 19:
-                continue
-            dialog_text = row[18]
-            if not dialog_text or not str(dialog_text).strip():
-                continue
-            if str(dialog_text).strip() in ("string", "any", "int64", "float64"):
-                continue
-            all_records.append({
-                "dialog_idx": row_idx - 2,
-                "grade_group": str(row[2] or ""),
-                "task_id": str(row[8] or ""),
-                "dialog": str(dialog_text),
-                "model": model_name,
-                "student_type": student_type,
-            })
-        wb.close()
-    return pd.DataFrame(all_records) if all_records else None
+    for rec in base_records:
+        for combo in combos:
+            all_records.append({**rec, **combo})
+    return pd.DataFrame(all_records)
 
 
 def _match_rate_color(rate: float) -> str:
