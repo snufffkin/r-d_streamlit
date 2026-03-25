@@ -1,5 +1,7 @@
 import streamlit as st
 
+st.cache_data.clear()
+
 st.set_page_config(
     page_title="R&D Аналитика",
     page_icon="📊",

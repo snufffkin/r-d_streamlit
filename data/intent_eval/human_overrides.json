@@ -1,0 +1,275 @@
+{
+  "Gemini-2.5-Flash|medium|74|2": {
+    "match": true,
+    "ctx_appropriate": true,
+    "actual_intent": "",
+    "human_reason": "ответ просто неверный"
+  },
+  "Gemini-3-Flash|strong|64|10": {
+    "match": true,
+    "ctx_appropriate": true,
+    "actual_intent": "set-problem",
+    "human_reason": "просит ответ на изначальный вопрос"
+  },
+  "Gemini-3-Flash|medium|1|2": {
+    "match": false,
+    "ctx_appropriate": false,
+    "actual_intent": "answer",
+    "human_reason": "интент согласиться тут не уместен потому что идет ответ на вопрос",
+    "reviewed": true
+  },
+  "Gemini-2.5-Flash|strong|16|3": {
+    "match": true,
+    "ctx_appropriate": true,
+    "actual_intent": "",
+    "human_reason": "нормальная реакция"
+  },
+  "Gemini-2.5-Flash|strong|56|34": {
+    "reviewed": true
+  },
+  "Gemini-2.5-Flash|strong|43|8": {
+    "reviewed": true
+  },
+  "Gemini-3-Flash|strong|61|8": {
+    "reviewed": true
+  },
+  "Gemini-3-Flash|strong|61|12": {
+    "match": false,
+    "ctx_appropriate": false,
+    "actual_intent": "answer",
+    "human_reason": "непонятно с чем соглашаться",
+    "reviewed": true
+  },
+  "Gemini-2.5-Flash|strong|56|38": {
+    "reviewed": true
+  },
+  "DeepSeek-V3.1|weak|18|2": {
+    "match": true,
+    "ctx_appropriate": true,
+    "actual_intent": "answer",
+    "human_reason": "ответ просто неправильный",
+    "reviewed": true
+  },
+  "DeepSeek-V3.1|medium|10|3": {
+    "reviewed": true
+  },
+  "DeepSeek-V3.1|medium|109|2": {
+    "reviewed": true
+  },
+  "DeepSeek-V3.1|medium|116|5": {
+    "reviewed": true
+  },
+  "DeepSeek-V3.1|medium|120|3": {
+    "match": true,
+    "ctx_appropriate": true,
+    "actual_intent": "",
+    "human_reason": "",
+    "reviewed": true
+  },
+  "DeepSeek-V3.1|medium|129|10": {
+    "reviewed": true
+  },
+  "DeepSeek-V3.1|medium|142|6": {
+    "reviewed": true
+  },
+  "DeepSeek-V3.1|medium|146|4": {
+    "reviewed": true
+  },
+  "DeepSeek-V3.1|medium|150|10": {
+    "reviewed": true
+  },
+  "DeepSeek-V3.1|medium|151|9": {
+    "reviewed": true
+  },
+  "DeepSeek-V3.1|medium|71|2": {
+    "reviewed": true
+  },
+  "Gemini-3-Flash|medium|200|5": {
+    "is_defect": false,
+    "match": true,
+    "ctx_appropriate": true,
+    "actual_intent": "answer",
+    "human_reason": "",
+    "reviewed": true
+  },
+  "GLM-4.5|strong|129|14": {
+    "reviewed": true
+  },
+  "Gemini-2.5-Flash|medium|139|5": {
+    "is_defect": false,
+    "match": true,
+    "ctx_appropriate": true,
+    "actual_intent": "get-explanation",
+    "human_reason": "переспрашивает вопрос получает ответ",
+    "reviewed": true
+  },
+  "Gemini-3-Flash|strong|182|2": {
+    "is_defect": false,
+    "match": false,
+    "ctx_appropriate": true,
+    "actual_intent": "answer",
+    "human_reason": "",
+    "reviewed": true
+  },
+  "DeepSeek-V3.1|medium|122|3": {
+    "reviewed": true
+  },
+  "DeepSeek-V3.1|medium|22|2": {
+    "reviewed": true
+  },
+  "DeepSeek-V3.1|medium|34|3": {
+    "reviewed": true
+  },
+  "DeepSeek-V3.1|medium|22|10": {
+    "is_defect": false,
+    "match": true,
+    "ctx_appropriate": true,
+    "actual_intent": "",
+    "human_reason": "",
+    "reviewed": true
+  },
+  "DeepSeek-V3.1|medium|22|16": {
+    "reviewed": true
+  },
+  "DeepSeek-V3.1|strong|66|7": {
+    "reviewed": true
+  },
+  "DeepSeek-V3.1|weak|139|2": {
+    "reviewed": true
+  },
+  "DeepSeek-V3.1|weak|139|5": {
+    "reviewed": true
+  },
+  "DeepSeek-V3.1|weak|139|7": {
+    "reviewed": true
+  },
+  "DeepSeek-V3.1|weak|151|9": {
+    "reviewed": true
+  },
+  "DeepSeek-V3.1|weak|151|10": {
+    "reviewed": true
+  },
+  "DeepSeek-V3.1|weak|151|14": {
+    "reviewed": true
+  },
+  "DeepSeek-V3.1|weak|151|15": {
+    "reviewed": true
+  },
+  "DeepSeek-V3.1|weak|151|17": {
+    "reviewed": true
+  },
+  "DeepSeek-V3.1|weak|151|3": {
+    "reviewed": true
+  },
+  "DeepSeek-V3.1|weak|184|4": {
+    "reviewed": true
+  },
+  "DeepSeek-V3.1|weak|184|7": {
+    "reviewed": true
+  },
+  "DeepSeek-V3.1|weak|136|2": {
+    "reviewed": true
+  },
+  "DeepSeek-V3.1|weak|136|10": {
+    "reviewed": true
+  },
+  "DeepSeek-V3.1|weak|136|11": {
+    "reviewed": true
+  },
+  "DeepSeek-V3.1|weak|194|20": {
+    "reviewed": true
+  },
+  "GLM-4.5|strong|11|7": {
+    "reviewed": true
+  },
+  "DeepSeek-V3.1|weak|33|2": {
+    "reviewed": true
+  },
+  "DeepSeek-V3.1|weak|33|4": {
+    "reviewed": true
+  },
+  "GLM-4.5|strong|142|11": {
+    "reviewed": true
+  },
+  "GLM-4.5|strong|142|13": {
+    "reviewed": true
+  },
+  "GLM-4.5|strong|142|14": {
+    "reviewed": true
+  },
+  "GLM-4.5|strong|142|20": {
+    "reviewed": true
+  },
+  "DeepSeek-V3.1|medium|34|2": {
+    "reviewed": true
+  },
+  "DeepSeek-V3.1|medium|22|4": {
+    "is_defect": false,
+    "match": true,
+    "ctx_appropriate": false,
+    "actual_intent": "agree-with-tutor",
+    "human_reason": "непонятно что правильно",
+    "reviewed": true
+  },
+  "DeepSeek-V3.1|medium|22|14": {
+    "reviewed": true
+  },
+  "DeepSeek-V3.1|strong|134|3": {
+    "reviewed": true
+  },
+  "DeepSeek-V3.1|weak|136|3": {
+    "reviewed": true
+  },
+  "DeepSeek-V3.1|weak|198|12": {
+    "is_defect": false,
+    "match": true,
+    "ctx_appropriate": false,
+    "actual_intent": "",
+    "human_reason": "",
+    "reviewed": true
+  },
+  "DeepSeek-V3.1|weak|198|17": {
+    "reviewed": true
+  },
+  "DeepSeek-V3.1|weak|198|19": {
+    "reviewed": true
+  },
+  "DeepSeek-V3.1|weak|198|21": {
+    "is_defect": false,
+    "match": true,
+    "ctx_appropriate": false,
+    "actual_intent": "",
+    "human_reason": "",
+    "reviewed": true
+  },
+  "DeepSeek-V3.1|medium|22|15": {
+    "reviewed": true
+  },
+  "DeepSeek-V3.1|weak|198|7": {
+    "reviewed": true
+  },
+  "DeepSeek-V3.1|strong|42|2": {
+    "reviewed": true
+  },
+  "DeepSeek-V3.1|strong|42|4": {
+    "reviewed": true
+  },
+  "DeepSeek-V3.1|strong|42|5": {
+    "reviewed": true
+  },
+  "DeepSeek-V3.1|strong|42|7": {
+    "reviewed": true
+  },
+  "DeepSeek-V3.1|strong|66|2": {
+    "reviewed": true
+  },
+  "DeepSeek-V3.1|strong|42|8": {
+    "reviewed": true
+  },
+  "DeepSeek-V3.1|strong|194|2": {
+    "reviewed": true
+  },
+  "DeepSeek-V3.1|medium|34|4": {
+    "reviewed": true
+  }
+}
