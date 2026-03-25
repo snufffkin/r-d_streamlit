@@ -193,16 +193,24 @@ def _parse_dialog_to_turns(dialog_text: str) -> list[dict]:
 
 
 @st.cache_data
+def _parse_filename_metadata(filename: str) -> tuple[str, str]:
+    """Extract (model_name, student_type) from _rendered*.xlsx filename."""
+    stem = Path(filename).stem  # e.g. "_rendered_gemini_weak"
+    parts = stem.lstrip("_").removeprefix("rendered").lstrip("_").split("_", 1)
+    model_name = parts[0] if parts else "unknown"
+    student_type = parts[1] if len(parts) > 1 else "unknown"
+    return model_name, student_type
+
+
 def load_source_dialogs(_mtime_key: float) -> pd.DataFrame | None:
     """Load source dialogs from all _rendered*.xlsx files."""
-    from eval_intents.run import parse_filename_metadata
     xlsx_files = sorted(DATA_DIR.glob("_rendered*.xlsx"))
     if not xlsx_files:
         return None
     import openpyxl
     all_records = []
     for xlsx_path in xlsx_files:
-        model_name, student_type = parse_filename_metadata(str(xlsx_path))
+        model_name, student_type = _parse_filename_metadata(str(xlsx_path))
         wb = openpyxl.load_workbook(xlsx_path, data_only=True)
         ws = wb.active
         for row_idx in range(3, ws.max_row + 1):
