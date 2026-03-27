@@ -1,0 +1,2 @@
+{"dialog_id": "otlichnik_202511-32B-grpo-actor_dsmt-v1.lernlm-synth-v0.1-progress-dump.2.5ep.lr5e-6.bs8_3def15e1-57c2-4417-b37f-61513004a420", "evaluator": "gemini-2.5-flash", "error": "Could not parse JSON from response: line 1 column 1 (char 0)", "timestamp": "2026-03-26T19:21:03.126142"}
+{"dialog_id": "weak_202511-32B-grpo-actor_dsmt-v1.lernlm-synth-v0.1-progress-dump.2.5ep.lr5e-6.bs8_aa1a8e14-bdbe-41fe-9ec2-a7d7147f1037", "evaluator": "gemini-2.5-flash", "error": "Could not parse JSON from response: line 1 column 1 (char 0)", "timestamp": "2026-03-26T19:25:19.837550"}

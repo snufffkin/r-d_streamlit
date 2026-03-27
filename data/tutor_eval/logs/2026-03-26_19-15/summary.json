@@ -1,0 +1,59 @@
+{
+  "total_dialogs": 54,
+  "evaluated": 54,
+  "errors": 0,
+  "avg_scores": {
+    "expectations": {
+      "mean": 0.22,
+      "count": 54
+    },
+    "transparency": {
+      "mean": 1.0,
+      "count": 54
+    },
+    "learning_goal": {
+      "mean": 2.06,
+      "count": 54
+    },
+    "adaptivity": {
+      "mean": 2.19,
+      "count": 54
+    },
+    "simplicity": {
+      "mean": 2.74,
+      "count": 54
+    },
+    "encourages_thinking": {
+      "mean": 2.0,
+      "count": 54
+    },
+    "error_handling": {
+      "mean": 2.81,
+      "count": 47
+    },
+    "friendly": {
+      "mean": 2.93,
+      "count": 54
+    },
+    "adequacy": {
+      "mean": 2.61,
+      "count": 54
+    }
+  },
+  "agreement": {
+    "unanimous": 69.5,
+    "majority": 12.8,
+    "split": 17.7
+  },
+  "override_count": 108,
+  "total_tokens": 2859780,
+  "pipeline": {
+    "evaluators": [
+      "google/gemini-2.5-flash",
+      "google/gemini-3-flash-preview",
+      "qwen/qwen3.5-397b-a17b"
+    ],
+    "temperature": 0.0,
+    "judge": "anthropic/claude-sonnet-4"
+  }
+}

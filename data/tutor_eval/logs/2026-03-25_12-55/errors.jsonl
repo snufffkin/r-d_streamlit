@@ -1,0 +1,4 @@
+{"dialog_id": "otlichnik_gemini25falsh_9193e3c6-ce74-474c-a45e-4fa35de902ae", "evaluator": "gemini_t0.3", "error": "Could not parse JSON from response: line 1 column 1 (char 0)", "timestamp": "2026-03-25T12:55:35.623487"}
+{"dialog_id": "otlichnik_gemini25falsh_9193e3c6-ce74-474c-a45e-4fa35de902ae", "evaluator": "gemini_t0.7", "error": "Could not parse JSON from response: line 1 column 1 (char 0)", "timestamp": "2026-03-25T12:55:36.224711"}
+{"dialog_id": "otlichnik_gemini25falsh_9193e3c6-ce74-474c-a45e-4fa35de902ae", "evaluator": "gemini_t0.0", "error": "Could not parse JSON from response: line 1 column 1 (char 0)", "timestamp": "2026-03-25T12:55:36.911091"}
+{"dialog_id": "otlichnik_gemini25falsh_9193e3c6-ce74-474c-a45e-4fa35de902ae", "error": "Only 0 evaluators succeeded, need at least 2", "timestamp": "2026-03-25T12:55:36.911224"}

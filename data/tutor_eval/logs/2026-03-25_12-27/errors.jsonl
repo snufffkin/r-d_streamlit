@@ -1,0 +1,3 @@
+{"dialog_id": "otlichnik_gemini25falsh_9193e3c6-ce74-474c-a45e-4fa35de902ae", "evaluator": "gemini_t0.7", "error": "Could not parse JSON from response: line 1 column 1 (char 0)", "timestamp": "2026-03-25T12:27:30.192109"}
+{"dialog_id": "medium_gemini3flash_black_10-11_796.5", "error": "Judge failed: Connection error.", "timestamp": "2026-03-25T12:27:39.151729"}
+{"dialog_id": "medium_deepseekV31Terminus_id_50", "error": "Judge failed: Connection error.", "timestamp": "2026-03-25T12:27:43.771887"}

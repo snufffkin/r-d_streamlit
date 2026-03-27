@@ -1,0 +1,12 @@
+{"dialog_id": "medium_gemini3flash_black_10-11_796.5", "evaluator": "gemini-3-flash", "error": "Connection error.", "timestamp": "2026-03-26T00:25:19.595041"}
+{"dialog_id": "otlichnik_gemini25falsh_9193e3c6-ce74-474c-a45e-4fa35de902ae", "evaluator": "gemini-2.5-flash", "error": "Connection error.", "timestamp": "2026-03-26T00:25:19.629484"}
+{"dialog_id": "otlichnik_gemini25falsh_9193e3c6-ce74-474c-a45e-4fa35de902ae", "evaluator": "qwen3.5-397b", "error": "Connection error.", "timestamp": "2026-03-26T00:25:19.658965"}
+{"dialog_id": "medium_deepseekV31Terminus_id_50", "evaluator": "gemini-2.5-flash", "error": "Connection error.", "timestamp": "2026-03-26T00:25:19.659571"}
+{"dialog_id": "otlichnik_gemini25falsh_9193e3c6-ce74-474c-a45e-4fa35de902ae", "evaluator": "gemini-3-flash", "error": "Connection error.", "timestamp": "2026-03-26T00:25:19.684844"}
+{"dialog_id": "otlichnik_gemini25falsh_9193e3c6-ce74-474c-a45e-4fa35de902ae", "error": "Only 0 evaluators succeeded, need at least 2", "timestamp": "2026-03-26T00:25:19.685056"}
+{"dialog_id": "medium_gemini3flash_black_10-11_796.5", "evaluator": "gemini-2.5-flash", "error": "Connection error.", "timestamp": "2026-03-26T00:25:19.727962"}
+{"dialog_id": "medium_deepseekV31Terminus_id_50", "evaluator": "qwen3.5-397b", "error": "Connection error.", "timestamp": "2026-03-26T00:25:19.759927"}
+{"dialog_id": "medium_gemini3flash_black_10-11_796.5", "evaluator": "qwen3.5-397b", "error": "Connection error.", "timestamp": "2026-03-26T00:25:19.780025"}
+{"dialog_id": "medium_gemini3flash_black_10-11_796.5", "error": "Only 0 evaluators succeeded, need at least 2", "timestamp": "2026-03-26T00:25:19.780252"}
+{"dialog_id": "medium_deepseekV31Terminus_id_50", "evaluator": "gemini-3-flash", "error": "Connection error.", "timestamp": "2026-03-26T00:25:19.827688"}
+{"dialog_id": "medium_deepseekV31Terminus_id_50", "error": "Only 0 evaluators succeeded, need at least 2", "timestamp": "2026-03-26T00:25:19.828117"}

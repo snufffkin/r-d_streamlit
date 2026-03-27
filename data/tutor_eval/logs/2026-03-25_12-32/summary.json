@@ -1,0 +1,59 @@
+{
+  "total_dialogs": 3,
+  "evaluated": 1,
+  "errors": 4,
+  "avg_scores": {
+    "expectations": {
+      "mean": 0.0,
+      "count": 1
+    },
+    "transparency": {
+      "mean": 1.0,
+      "count": 1
+    },
+    "learning_goal": {
+      "mean": 1.0,
+      "count": 1
+    },
+    "adaptivity": {
+      "mean": 0.0,
+      "count": 1
+    },
+    "simplicity": {
+      "mean": 2.0,
+      "count": 1
+    },
+    "encourages_thinking": {
+      "mean": 2.0,
+      "count": 1
+    },
+    "error_handling": {
+      "mean": -1.0,
+      "count": 1
+    },
+    "friendly": {
+      "mean": 2.0,
+      "count": 1
+    },
+    "adequacy": {
+      "mean": 3.0,
+      "count": 1
+    }
+  },
+  "agreement": {
+    "unanimous": 100.0,
+    "majority": 0.0,
+    "split": 0.0
+  },
+  "override_count": 0,
+  "total_tokens": 60321,
+  "pipeline": {
+    "evaluator": "google/gemini-2.5-flash x3 (via OpenRouter)",
+    "temperatures": [
+      0.0,
+      0.3,
+      0.7
+    ],
+    "judge": "claude-sonnet-4"
+  }
+}
