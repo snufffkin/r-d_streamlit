@@ -323,150 +323,148 @@ with st.expander("Текст диалога", expanded=False):
 confirmed_crits = dec.get("critical_flags", {}).get("confirmed", {})
 flagged_crits = dec.get("critical_flags", {}).get("flagged", {})
 
-if confirmed_crits or flagged_crits:
-    st.markdown("### Критические флаги")
+# Use dialog_id in widget keys so values reset on dialog switch
+_dk = selected_id
 
-    all_crit_names = set(list(confirmed_crits.keys()) + list(flagged_crits.keys()))
+with st.form(key=f"review_form_{_dk}"):
+    # --- Critical flags ---
+    if confirmed_crits or flagged_crits:
+        st.markdown("### Критические флаги")
 
-    crit_reviews = {}
-    for flag in CRITICAL_FLAGS:
-        if flag not in all_crit_names:
-            continue
+        all_crit_names = set(list(confirmed_crits.keys()) + list(flagged_crits.keys()))
 
-        flag_ru = CRITICAL_FLAGS_RU.get(flag, flag)
-        is_confirmed = flag in confirmed_crits
-        conf_data = confirmed_crits.get(flag, {})
-        flag_data = flagged_crits.get(flag, [])
+        crit_reviews = {}
+        for flag in CRITICAL_FLAGS:
+            if flag not in all_crit_names:
+                continue
 
-        with st.container(border=True):
-            st.markdown(f"#### {'🔴' if is_confirmed else '🟡'} {flag_ru} (`{flag}`)")
+            flag_ru = CRITICAL_FLAGS_RU.get(flag, flag)
+            is_confirmed = flag in confirmed_crits
+            conf_data = confirmed_crits.get(flag, {})
+            flag_data = flagged_crits.get(flag, [])
 
-            if is_confirmed:
-                st.markdown(f"**Вердикт judge:** подтверждён")
-                st.markdown(f"**Обоснование:** {conf_data.get('reasoning', '')}")
-            else:
-                st.markdown(f"**Вердикт judge:** не подтверждён (но оценщики флагнули)")
+            with st.container(border=True):
+                st.markdown(f"#### {'🔴' if is_confirmed else '🟡'} {flag_ru} (`{flag}`)")
 
-            if isinstance(flag_data, list):
-                for entry in flag_data:
-                    st.caption(f"Оценщик {entry.get('evaluator', '?')}: «{entry.get('evidence', '')}» — {entry.get('reasoning', '')}")
-            elif isinstance(flag_data, dict):
-                st.caption(f"«{flag_data.get('evidence', '')}» — {flag_data.get('reasoning', '')}")
+                if is_confirmed:
+                    st.markdown(f"**Вердикт judge:** подтверждён")
+                    st.markdown(f"**Обоснование:** {conf_data.get('reasoning', '')}")
+                else:
+                    st.markdown(f"**Вердикт judge:** не подтверждён (но оценщики флагнули)")
 
-            # Review form
-            prev = existing_review.get("crits", {}).get(flag, {})
-            col1, col2 = st.columns([1, 3])
-            with col1:
-                verdict = st.selectbox(
-                    "Решение",
-                    CRIT_OPTIONS,
-                    index=CRIT_OPTIONS.index(prev.get("verdict", "—")),
-                    key=f"crit_verdict_{flag}",
-                )
-            with col2:
-                comment = st.text_input(
-                    "Комментарий",
-                    value=prev.get("comment", ""),
-                    key=f"crit_comment_{flag}",
-                )
+                if isinstance(flag_data, list):
+                    for entry in flag_data:
+                        st.caption(f"Оценщик {entry.get('evaluator', '?')}: «{entry.get('evidence', '')}» — {entry.get('reasoning', '')}")
+                elif isinstance(flag_data, dict):
+                    st.caption(f"«{flag_data.get('evidence', '')}» — {flag_data.get('reasoning', '')}")
 
-            crit_reviews[flag] = {"verdict": verdict, "comment": comment}
+                # Review form
+                prev = existing_review.get("crits", {}).get(flag, {})
+                col1, col2 = st.columns([1, 3])
+                with col1:
+                    verdict = st.selectbox(
+                        "Решение",
+                        CRIT_OPTIONS,
+                        index=CRIT_OPTIONS.index(prev.get("verdict", "—")),
+                        key=f"crit_verdict_{_dk}_{flag}",
+                    )
+                with col2:
+                    comment = st.text_input(
+                        "Комментарий",
+                        value=prev.get("comment", ""),
+                        key=f"crit_comment_{_dk}_{flag}",
+                    )
+
+                crit_reviews[flag] = {"verdict": verdict, "comment": comment}
+    else:
+        st.markdown("### Критические флаги")
+        st.info("Нет критических флагов для этого диалога")
+        crit_reviews = {}
+
+    # --- Criteria scores ---
+    st.markdown("### Оценки по критериям")
+
+    final_scores = dec.get("final_scores", {})
+
+    header_cols = st.columns([2, 1, 3, 1, 3])
+    header_cols[0].markdown("**Критерий**")
+    header_cols[1].markdown("**Балл judge**")
+    header_cols[2].markdown("**Обоснование**")
+    header_cols[3].markdown("**Ваша оценка**")
+    header_cols[4].markdown("**Комментарий**")
+
+    criteria_reviews = {}
+    for criterion in CRITERIA:
+        entry = final_scores.get(criterion, {})
+        if isinstance(entry, dict):
+            score = entry.get("score", "?")
+            reasoning = entry.get("reasoning", "")
+        else:
+            score = entry
+            reasoning = ""
+
+        prev = existing_review.get("criteria", {}).get(criterion, {})
+
+        cols = st.columns([2, 1, 3, 1, 3])
+        cols[0].markdown(f"**{CRITERIA_RU.get(criterion, criterion)}**")
+
+        if score == -1:
+            cols[1].markdown("N/A")
+        else:
+            cols[1].markdown(f"**{score}**/3")
+
+        cols[2].caption(reasoning[:200] if reasoning else "—")
+
+        with cols[3]:
+            agreement = st.selectbox(
+                "Оценка",
+                AGREEMENT_OPTIONS,
+                index=AGREEMENT_OPTIONS.index(prev.get("agreement", "—")),
+                key=f"agree_{_dk}_{criterion}",
+                label_visibility="collapsed",
+            )
+
+        with cols[4]:
+            comment = st.text_input(
+                "Комментарий",
+                value=prev.get("comment", ""),
+                key=f"comment_{_dk}_{criterion}",
+                label_visibility="collapsed",
+            )
+
+        criteria_reviews[criterion] = {"agreement": agreement, "comment": comment}
+
+    # --- General comment ---
+    st.markdown("### Общий комментарий")
+    general_comment = st.text_area(
+        "Общий комментарий по диалогу",
+        value=existing_review.get("general_comment", ""),
+        key=f"general_comment_{_dk}",
+        height=80,
+    )
+
+    # --- Save (Enter in any field or button click) ---
+    col_save, col_status = st.columns([1, 3])
+    with col_save:
+        submitted = st.form_submit_button(
+            "💾 Сохранить ревью", type="primary", use_container_width=True,
+        )
+
+if submitted:
+    review = {
+        "dialog_id": selected_id,
+        "run": selected_run,
+        "criteria": criteria_reviews,
+        "crits": crit_reviews,
+        "general_comment": general_comment,
+        "timestamp": datetime.now().isoformat(),
+    }
+    save_review(review)
+    st.cache_data.clear()
+    st.rerun()
+
+if selected_id in reviews:
+    ts = reviews[selected_id].get("timestamp", "")
+    st.success(f"Проверен ({ts})")
 else:
-    st.markdown("### Критические флаги")
-    st.info("Нет критических флагов для этого диалога")
-    crit_reviews = {}
-
-# ---------------------------------------------------------------------------
-# Section 2: Criteria scores review
-# ---------------------------------------------------------------------------
-
-st.markdown("### Оценки по критериям")
-
-final_scores = dec.get("final_scores", {})
-
-# Build review table
-header_cols = st.columns([2, 1, 3, 1, 3])
-header_cols[0].markdown("**Критерий**")
-header_cols[1].markdown("**Балл judge**")
-header_cols[2].markdown("**Обоснование**")
-header_cols[3].markdown("**Ваша оценка**")
-header_cols[4].markdown("**Комментарий**")
-
-criteria_reviews = {}
-for criterion in CRITERIA:
-    entry = final_scores.get(criterion, {})
-    if isinstance(entry, dict):
-        score = entry.get("score", "?")
-        reasoning = entry.get("reasoning", "")
-    else:
-        score = entry
-        reasoning = ""
-
-    prev = existing_review.get("criteria", {}).get(criterion, {})
-
-    cols = st.columns([2, 1, 3, 1, 3])
-    cols[0].markdown(f"**{CRITERIA_RU.get(criterion, criterion)}**")
-
-    if score == -1:
-        cols[1].markdown("N/A")
-    else:
-        cols[1].markdown(f"**{score}**/3")
-
-    cols[2].caption(reasoning[:200] if reasoning else "—")
-
-    with cols[3]:
-        agreement = st.selectbox(
-            "Оценка",
-            AGREEMENT_OPTIONS,
-            index=AGREEMENT_OPTIONS.index(prev.get("agreement", "—")),
-            key=f"agree_{criterion}",
-            label_visibility="collapsed",
-        )
-
-    with cols[4]:
-        comment = st.text_input(
-            "Комментарий",
-            value=prev.get("comment", ""),
-            key=f"comment_{criterion}",
-            label_visibility="collapsed",
-        )
-
-    criteria_reviews[criterion] = {"agreement": agreement, "comment": comment}
-
-# ---------------------------------------------------------------------------
-# General comment
-# ---------------------------------------------------------------------------
-
-st.markdown("### Общий комментарий")
-general_comment = st.text_area(
-    "Общий комментарий по диалогу",
-    value=existing_review.get("general_comment", ""),
-    key="general_comment",
-    height=80,
-)
-
-# ---------------------------------------------------------------------------
-# Save
-# ---------------------------------------------------------------------------
-
-col_save, col_status = st.columns([1, 3])
-with col_save:
-    if st.button("💾 Сохранить ревью", type="primary", use_container_width=True):
-        review = {
-            "dialog_id": selected_id,
-            "run": selected_run,
-            "criteria": criteria_reviews,
-            "crits": crit_reviews,
-            "general_comment": general_comment,
-            "timestamp": datetime.now().isoformat(),
-        }
-        save_review(review)
-        st.cache_data.clear()
-        st.rerun()
-
-with col_status:
-    if selected_id in reviews:
-        ts = reviews[selected_id].get("timestamp", "")
-        st.success(f"Проверен ({ts})")
-    else:
-        st.info("Ещё не проверен")
+    st.info("Ещё не проверен")
